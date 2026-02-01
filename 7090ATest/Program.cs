@@ -476,27 +476,56 @@ namespace ConsoleApp17090Test
                     // INITIALIZE 7090A & OUTPUT P1, P2 & WINDOW COORDINATES (Table 4-3 lines 1640-1680)
                     task.Description = "[cyan]Initializing and reading parameters[/]";
                     
-                    // PG IN OP - Page feed, Initialize, Output P1 and P2 (Table 4-3 line 1640)
-                    gpibSession.FormattedIO.WriteLine("PG;IN;OP;");
-                    string hardClipResponse = gpibSession.FormattedIO.ReadString();
-                    
-                    // Parse P1, P2 coordinates (Table 4-3 line 1650: ENTER N; X1,Y1,X2,Y2)
-                    string[] values = hardClipResponse.Split(',');
-                    hardClipLowerLeftX = int.Parse(values[0]);
-                    hardClipLowerLeftY = int.Parse(values[1]);
-                    hardClipUpperRightX = int.Parse(values[2]);
-                    hardClipUpperRightY = int.Parse(values[3]);
-                    
-                    // OW - Output Window (Table 4-3 line 1660)
-                    gpibSession.FormattedIO.WriteLine("OW;");
-                    string outputWindowResponse = gpibSession.FormattedIO.ReadString();
-                    
-                    // Parse window coordinates (Table 4-3 line 1670: ENTER N; X3,Y3,X4,Y4)
-                    values = outputWindowResponse.Split(',');
-                    outputWindowLowerLeftX = int.Parse(values[0]);
-                    outputWindowLowerLeftY = int.Parse(values[1]);
-                    outputWindowUpperRightX = int.Parse(values[2]);
-                    outputWindowUpperRightY = int.Parse(values[3]);
+                    try
+                    {
+                        // PG IN OP - Page feed, Initialize, Output P1 and P2 (Table 4-3 line 1640)
+                        gpibSession.FormattedIO.WriteLine("PG;IN;OP;");
+                        string hardClipResponse = gpibSession.FormattedIO.ReadString();
+                        
+                        if (string.IsNullOrWhiteSpace(hardClipResponse))
+                        {
+                            throw new InvalidOperationException("Failed to read P1/P2 coordinates - empty response");
+                        }
+                        
+                        // Parse P1, P2 coordinates (Table 4-3 line 1650: ENTER N; X1,Y1,X2,Y2)
+                        string[] values = hardClipResponse.Split(',');
+                        
+                        if (values.Length < 4)
+                        {
+                            throw new InvalidOperationException($"Invalid P1/P2 response - expected 4 values, got {values.Length}");
+                        }
+                        
+                        hardClipLowerLeftX = int.Parse(values[0]);
+                        hardClipLowerLeftY = int.Parse(values[1]);
+                        hardClipUpperRightX = int.Parse(values[2]);
+                        hardClipUpperRightY = int.Parse(values[3]);
+                        
+                        // OW - Output Window (Table 4-3 line 1660)
+                        gpibSession.FormattedIO.WriteLine("OW;");
+                        string outputWindowResponse = gpibSession.FormattedIO.ReadString();
+                        
+                        if (string.IsNullOrWhiteSpace(outputWindowResponse))
+                        {
+                            throw new InvalidOperationException("Failed to read OW coordinates - empty response");
+                        }
+                        
+                        // Parse window coordinates (Table 4-3 line 1670: ENTER N; X3,Y3,X4,Y4)
+                        values = outputWindowResponse.Split(',');
+                        
+                        if (values.Length < 4)
+                        {
+                            throw new InvalidOperationException($"Invalid OW response - expected 4 values, got {values.Length}");
+                        }
+                        
+                        outputWindowLowerLeftX = int.Parse(values[0]);
+                        outputWindowLowerLeftY = int.Parse(values[1]);
+                        outputWindowUpperRightX = int.Parse(values[2]);
+                        outputWindowUpperRightY = int.Parse(values[3]);
+                    }
+                    catch (FormatException ex)
+                    {
+                        throw new InvalidOperationException("Failed to parse plotter coordinates - invalid number format", ex);
+                    }
 
                     // DRAW+ AT P1 & P2 & LABEL COORDINATES (Table 4-3 lines 1690-1740)
                     task.Description = "[cyan]Drawing coordinate labels[/]";
