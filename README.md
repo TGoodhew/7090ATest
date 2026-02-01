@@ -33,7 +33,7 @@ The program performs the following tests and demonstrations:
    - Labels axes in both inches and centimeters
 
 2. **Pen Repeatability Tests**
-   - Type 1: Cross pattern with 8 radial segments
+   - Type 1: Star/cross pattern with 8 radial line segments (drawn with multiple pens to test repeatability)
    - Type 2: Simple cross pattern (vertical and horizontal)
    - Tests performed at multiple locations on the plot
    - Each test numbered to track pen-to-pen positioning consistency
@@ -199,7 +199,11 @@ The default GPIB address is **5** (as specified in Table 4-3 of the service manu
 
 **Paper Size**
 - Program designed for 8.5 x 11 inch paper (as specified in Table 4-3)
-- The HP 7090A supports multiple paper sizes via rear panel switch: A3 ISO (275 x 402 mm), ANSI B (10.2 x 16.3 in), A4 ISO (192 x 175 mm), and ANSI A (7.5 x 10.2 in)
+- The HP 7090A supports multiple paper sizes via rear panel switch (per paragraph 4-9):
+  - A3 ISO: 275 x 402 mm
+  - ANSI B: 10.2 x 16.3 in
+  - A4 ISO: 192 x 175 mm
+  - ANSI A: 7.5 x 10.2 in
 - Smaller paper may clip some patterns
 - Hard clip limits (P1, P2) define drawable area
 
