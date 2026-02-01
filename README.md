@@ -15,7 +15,7 @@ The HP 7090A is a professional 6-pen microprocessor-controlled Measurement Plott
 This program implements the Performance Verification test program from **Table 4-3** (referenced in Paragraph 4-12 and 4-13) of the **HP 7090A Service Manual**. The original HP test program was written in BASIC specifically for the HP-85 personal computer. It tests the input/output (I/O) circuits of the HP 7090A, the majority of the logic circuits, and the paper and pen drive mechanisms. The test verifies critical functions including:
 
 - Hard clip limits (P1, P2) and output window boundaries
-- Pen-to-pen repeatability across all 8 pens
+- Pen-to-pen repeatability across all 6 pens
 - Coordinate system accuracy (both inches and centimeters)
 - Fill patterns and shading capabilities
 - Geometric shape rendering (circles, wedges, rectangles)
@@ -199,7 +199,7 @@ The default GPIB address is **5** (as specified in Table 4-3 of the service manu
 
 **Paper Size**
 - Program designed for 8.5 x 11 inch paper (as specified in Table 4-3)
-- Also supports ISO A4 (210 x 297 mm), A3 (297 x 420 mm), and ANSI B (11 x 17 inch) paper
+- The HP 7090A supports multiple paper sizes via rear panel switch: A3 ISO (275 x 402 mm), ANSI B (10.2 x 16.3 in), A4 ISO (192 x 175 mm), and ANSI A (7.5 x 10.2 in)
 - Smaller paper may clip some patterns
 - Hard clip limits (P1, P2) define drawable area
 
