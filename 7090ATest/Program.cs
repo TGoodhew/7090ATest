@@ -705,6 +705,7 @@ namespace ConsoleApp17090Test
                     
                     // DEADBAND TESTS (Table 4-3 lines 2590, 2790-3090)
                     task.Description = "[cyan]Drawing deadband tests[/]";
+                    gpibSession.FormattedIO.WriteLine("PU;");  // Pen up before starting deadband tests
                     DrawDeadbandTests();
                     
                     // PEN WOBBLE TEST (Table 4-3 lines 2600, 3280-3490)
