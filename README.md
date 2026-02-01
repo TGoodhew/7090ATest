@@ -63,7 +63,7 @@ The program performs the following tests and demonstrations:
   - Provides GPIB communication interface
   - Required for communicating with the plotter
 - HP 7090A Measurement Plotting System connected via HP-IB (GPIB) interface
-  - Default GPIB address: 5 (configurable in code as per service manual Table 4-3)
+  - GPIB address: configurable (program defaults to 6; service manual Table 4-3 recommends 5)
 - Paper loaded in the plotter (8.5 x 11 inch or A4 size recommended)
 
 ## Building the Project
@@ -81,7 +81,7 @@ The project targets .NET Framework 4.7.2.
 1. Ensure the HP 7090A Measurement Plotting System is:
    - Connected to your computer via HP-IB (GPIB)
    - Powered on
-   - HP-IB address set to 5 (or match the configured address in code)
+   - HP-IB address configured (program defaults to 6; see "Modifying the GPIB Address" section)
    - Has paper loaded (8.5 x 11 inch paper recommended as per service manual)
    - 6 narrow width pens installed (as specified in Table 4-3)
 
@@ -91,7 +91,7 @@ The project targets .NET Framework 4.7.2.
    ```
 
 3. The program will:
-   - Connect to GPIB address 5 (default, as per service manual Table 4-3)
+   - Connect to GPIB address 6 (default; configurable at runtime or in code)
    - Configure the IO buffer
    - Read plotter parameters
    - Execute the plotting sequence
@@ -108,7 +108,7 @@ The project targets .NET Framework 4.7.2.
 
 The program uses the National Instruments VISA library to communicate with the plotter:
 
-1. **Initialization**: Opens HP-IB (GPIB) session at address 5 (default per service manual Table 4-3)
+1. **Initialization**: Opens HP-IB (GPIB) session at the configured address (defaults to 6)
 2. **Buffer Configuration**: Sets IO buffer to 6000 bytes using ESC.T command
 3. **Timeout Settings**: 
    - Initial: 2 seconds for quick operations
@@ -170,7 +170,7 @@ The program is organized into logical regions:
 
 ## Modifying the GPIB Address
 
-The default GPIB address is **5** (as specified in Table 4-3 of the service manual). There are two ways to change it:
+The program currently defaults to GPIB address **6**. The HP 7090A service manual (Table 4-3) recommends address **5** for the performance verification test. The address is configurable in two ways:
 
 1. **At runtime (recommended)**  
    When you run the program, use the menu option that allows you to set or change the GPIB address.  
@@ -181,8 +181,10 @@ The default GPIB address is **5** (as specified in Table 4-3 of the service manu
    You can change this value to match your plotter's configured address, then rebuild the program. For example:
 
    ```csharp
-   private const int DefaultGpibAddress = 5;  // Default per service manual Table 4-3
+   private const int DefaultGpibAddress = 6;  // Current program default
    ```
+   
+   Note: The service manual Table 4-3 uses address 5, but the program defaults to 6 for compatibility.
 
 ## Troubleshooting
 
