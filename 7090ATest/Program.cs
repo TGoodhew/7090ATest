@@ -630,7 +630,7 @@ namespace ConsoleApp17090Test
                     gpibSession.FormattedIO.WriteLine("PD;PR0,3000,3000,0,0,-3000,-3000,0;PU;SP5;");
                     task.Increment(ProgressPenRepeatability);
 
-                    // Draw radial lines from circle center (Table 4-3: loop 0 to 355 step 5)
+                    // Draw radial lines from circle center (Table 4-3: loop 0 to 355 step 5, lines 2070-2090)
                     task.Description = "[cyan]Drawing radial lines[/]";
                     // Conversion factor from degrees to radians for trigonometric functions
                     double degreesToRadiansConversion = Math.PI / 180.0;
@@ -647,7 +647,8 @@ namespace ConsoleApp17090Test
                         int outerCircleLineX = (int)Math.Round(CircleCenterX + OuterCircleRadius * Math.Cos(radians));
                         int outerCircleLineY = (int)Math.Round(CircleCenterY + OuterCircleRadius * Math.Sin(radians));
 
-                        gpibSession.FormattedIO.WriteLine("PU" + innerCircleLineX + "," + innerCircleLineY + ";PD" + outerCircleLineX + "," + outerCircleLineY + ";");
+                        // Table 4-3 lines 2080-2090: PA to inner with PD, then PA to outer with PU (draws line from inner to outer)
+                        gpibSession.FormattedIO.WriteLine("PA" + innerCircleLineX + "," + innerCircleLineY + ";PD;PA" + outerCircleLineX + "," + outerCircleLineY + ";PU;");
                     }
 
                     // IW: Reset Input Window (Table 4-3 coordinates)
@@ -701,6 +702,14 @@ namespace ConsoleApp17090Test
                         x4 -= 25;
                         y4 -= 25;
                     }
+                    
+                    // DEADBAND TESTS (Table 4-3 lines 2590, 2790-3090)
+                    task.Description = "[cyan]Drawing deadband tests[/]";
+                    DrawDeadbandTests();
+                    
+                    // PEN WOBBLE TEST (Table 4-3 lines 2600, 3280-3490)
+                    task.Description = "[cyan]Drawing pen wobble test[/]";
+                    DrawPenWobbleTest();
                     
                     // Final positioning: select pen 0 and move to upper right (Table 4-3 line 2610)
                     gpibSession.FormattedIO.WriteLine($"SP0;PA{outputWindowUpperRightX},{outputWindowUpperRightY};");
@@ -758,6 +767,110 @@ namespace ConsoleApp17090Test
             gpibSession.FormattedIO.WriteLine("CP.4,-.8;LB" + pass + EndOfTextChar + ";CP-1.4,.8;");
             // Draw a cross: vertical line down then up, horizontal line right
             gpibSession.FormattedIO.WriteLine("PR0,512;PD0,-1024;PU-512,512;PD1024,0;PU;");
+        }
+
+        #endregion
+
+        #region Deadband and Pen Wobble Tests
+
+        /// <summary>
+        /// Draws deadband test scales at various positions (Table 4-3 lines 2790-3090).
+        /// Tests the pen deadband (ability to start/stop precisely).
+        /// </summary>
+        private static void DrawDeadbandTests()
+        {
+            // First deadband test (Table 4-3 lines 2820-2870)
+            DrawDeadbandScale(4280, 1750, true, 0, 0);
+            
+            // Second deadband test (Table 4-3 lines 2880-2920)
+            DrawDeadbandScale(5880, 1952, true, 2, 0);
+            
+            // Draw horizontal line with arrow (Table 4-3 lines 2930-2950)
+            gpibSession.FormattedIO.WriteLine("PA4680,2200;PD;PA5480,2200;PU;");
+            gpibSession.FormattedIO.WriteLine("PA5080,2175;DI-1,0;CS1;CP-.33,-.75;");
+            gpibSession.FormattedIO.WriteLine("LB" + ((char)94) + EndOfTextChar); // CHR$(94) is ^
+            
+            // Third deadband test (Table 4-3 lines 2960-3010)
+            DrawDeadbandScale(3210, 3200, false, 0, 0);
+            
+            // Fourth deadband test (Table 4-3 lines 3020-3060)
+            DrawDeadbandScale(2998, 4800, false, 0, 2);
+            
+            // Draw vertical line with arrow (Table 4-3 lines 3070-3090)
+            gpibSession.FormattedIO.WriteLine("PA2950,4400;PD;PA2950,3600;PU;");
+            gpibSession.FormattedIO.WriteLine("PA2975,4000;DI0,-1;CP-.33,-.75;LB" + ((char)94) + EndOfTextChar);
+        }
+
+        /// <summary>
+        /// Draws a deadband test scale at specified position (Table 4-3 lines 3130-3270).
+        /// Helper function for DrawDeadbandTests.
+        /// </summary>
+        /// <param name="x1">Starting X coordinate</param>
+        /// <param name="y1">Starting Y coordinate</param>
+        /// <param name="isHorizontal">True for horizontal scale, false for vertical</param>
+        /// <param name="m">M parameter for scale direction</param>
+        /// <param name="l">L parameter for scale direction</param>
+        private static void DrawDeadbandScale(int x1, int y1, bool isHorizontal, int m, int l)
+        {
+            int s = (m == 0 && l == 0) ? 1 : -1;
+            int i = isHorizontal ? 200 : 0;
+            int j = isHorizontal ? 0 : 200;
+            
+            // Draw 9 tick marks (Table 4-3 lines 3210-3260)
+            for (int k = 1; k <= 9; k++)
+            {
+                int x2 = x1 + s * ((k - 1) * i + m * (5 - k));
+                int y2 = y1 + s * ((k - 1) * j + l * (5 - k));
+                
+                // Move to tick position and draw small line
+                gpibSession.FormattedIO.WriteLine($"PA{x2},{y2};PD;PA{x2 + j},{y2 + i};PU;");
+            }
+        }
+
+        /// <summary>
+        /// Draws pen wobble test pattern (Table 4-3 lines 3280-3490).
+        /// Tests pen stability during rapid direction changes.
+        /// </summary>
+        private static void DrawPenWobbleTest()
+        {
+            // Start position (Table 4-3 line 3310)
+            gpibSession.FormattedIO.WriteLine("SP1;PA10200,1450;PD;VS;PR");
+            
+            int a0 = 0;
+            int a1 = 200;
+            
+            // First loop: draw zigzag pattern (Table 4-3 lines 3340-3360)
+            for (int i = 1; i <= 10; i++)
+            {
+                gpibSession.FormattedIO.WriteLine($"{a0},{a1},-{a1},{a0};");
+            }
+            
+            // Second loop: continue zigzag (Table 4-3 lines 3370-3390)
+            for (int i = 1; i <= 10; i++)
+            {
+                gpibSession.FormattedIO.WriteLine($"{a0},{a1},{a1},{a0};");
+            }
+            
+            // Move and continue pattern (Table 4-3 line 3400)
+            gpibSession.FormattedIO.WriteLine("0,200;PU;PR15,-15;PD;PR");
+            
+            // Third loop (Table 4-3 lines 3410-3430)
+            for (int i = 1; i <= 9; i++)
+            {
+                gpibSession.FormattedIO.WriteLine($"{a0},-{a1},-{a1},{a0};");
+            }
+            
+            // Final movement (Table 4-3 line 3440)
+            gpibSession.FormattedIO.WriteLine("0,-200,-200,0,0,-170,200,0,");
+            
+            // Fourth loop (Table 4-3 lines 3450-3470)
+            for (int i = 1; i <= 9; i++)
+            {
+                gpibSession.FormattedIO.WriteLine($"{a0},-{a1},{a1},{a0};");
+            }
+            
+            // End position (Table 4-3 line 3480)
+            gpibSession.FormattedIO.WriteLine("0,-200;PU;");
         }
 
         #endregion
