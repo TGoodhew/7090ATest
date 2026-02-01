@@ -184,7 +184,7 @@ The program currently defaults to GPIB address **6**. The HP 7090A service manua
    private const int DefaultGpibAddress = 6;  // Current program default
    ```
    
-   Note: The service manual Table 4-3 uses address 5, but the program defaults to 6 for compatibility.
+   Note: The service manual Table 4-3 uses address 5 for the performance verification test.
 
 ## Troubleshooting
 
