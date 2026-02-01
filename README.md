@@ -199,11 +199,12 @@ The default GPIB address is **5** (as specified in Table 4-3 of the service manu
 
 **Paper Size**
 - Program designed for 8.5 x 11 inch paper (as specified in Table 4-3)
-- The HP 7090A supports multiple paper sizes via rear panel switch (per paragraph 4-9):
-  - A3 ISO: 275 x 402 mm
-  - ANSI B: 10.2 x 16.3 in
-  - A4 ISO: 192 x 175 mm
-  - ANSI A: 7.5 x 10.2 in
+- The HP 7090A supports multiple paper sizes via rear panel switch (per paragraph 4-9).
+  Maximum writing areas for each paper size:
+  - A3 ISO: 275 x 402 mm writing area
+  - ANSI B: 10.2 x 16.3 in writing area
+  - A4 ISO: 192 x 175 mm writing area
+  - ANSI A: 7.5 x 10.2 in writing area
 - Smaller paper may clip some patterns
 - Hard clip limits (P1, P2) define drawable area
 
