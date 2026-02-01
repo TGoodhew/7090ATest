@@ -286,9 +286,6 @@ namespace ConsoleApp17090Test
         /// <param name="gpibAddress">The GPIB address to use for the plotter</param>
         private static void RunPlotterDemo(int gpibAddress)
         {
-            int hardClipLowerLeftX = 0, hardClipLowerLeftY = 0, hardClipUpperRightX = 0, hardClipUpperRightY = 0;
-            int outputWindowLowerLeftX = 0, outputWindowLowerLeftY = 0, outputWindowUpperRightX = 0, outputWindowUpperRightY = 0;
-
             try
             {
                 // Initialize GPIB communication
@@ -297,13 +294,8 @@ namespace ConsoleApp17090Test
                 Console.WriteLine("Ensure paper is loaded");
                 Console.WriteLine($"Connecting to HP 7090A at GPIB address {gpibAddress}...");
 
-                // Read plotter coordinates and parameters
-                ReadPlotterParameters(ref hardClipLowerLeftX, ref hardClipLowerLeftY, ref hardClipUpperRightX, ref hardClipUpperRightY, 
-                                      ref outputWindowLowerLeftX, ref outputWindowLowerLeftY, ref outputWindowUpperRightX, ref outputWindowUpperRightY);
-
-                // Execute the main plotting sequence
-                ExecutePlottingSequence(hardClipLowerLeftX, hardClipLowerLeftY, hardClipUpperRightX, hardClipUpperRightY, 
-                                        outputWindowLowerLeftX, outputWindowLowerLeftY, outputWindowUpperRightX, outputWindowUpperRightY);
+                // Execute the main plotting sequence (Table 4-3 flow: reads parameters inline, then draws)
+                ExecutePlottingSequence();
                 
                 WaitForUserToReturnToMenu();
             }
@@ -419,8 +411,8 @@ namespace ConsoleApp17090Test
             string gpibResourceName = string.Format("GPIB0::{0}::INSTR", gpibAddress);
             gpibSession = (GpibSession)resManager.Open(gpibResourceName);
             
-            // Set the timeout to 2 seconds for initial operations
-            gpibSession.TimeoutMilliseconds = DefaultTimeoutMs;
+            // Set timeout for plotting operations (Table 4-3 uses single timeout)
+            gpibSession.TimeoutMilliseconds = ExtendedTimeoutMs;
             gpibSession.TerminationCharacterEnabled = true;
             
             // Clear the session to ensure clean state
@@ -455,118 +447,19 @@ namespace ConsoleApp17090Test
 
         #endregion
 
-        #region Plotter Parameter Reading
-
-        /// <summary>
-        /// Reads the plotter parameters including hard clip limits (P1, P2) and output window (OW).
-        /// </summary>
-        /// <param name="hardClipLowerLeftX">Hard clip limit P1 X coordinate (lower-left corner)</param>
-        /// <param name="hardClipLowerLeftY">Hard clip limit P1 Y coordinate (lower-left corner)</param>
-        /// <param name="hardClipUpperRightX">Hard clip limit P2 X coordinate (upper-right corner)</param>
-        /// <param name="hardClipUpperRightY">Hard clip limit P2 Y coordinate (upper-right corner)</param>
-        /// <param name="outputWindowLowerLeftX">Output window lower-left X coordinate</param>
-        /// <param name="outputWindowLowerLeftY">Output window lower-left Y coordinate</param>
-        /// <param name="outputWindowUpperRightX">Output window upper-right X coordinate</param>
-        /// <param name="outputWindowUpperRightY">Output window upper-right Y coordinate</param>
-        /// <exception cref="Ivi.Visa.IOTimeoutException">Thrown when GPIB communication times out</exception>
-        private static void ReadPlotterParameters(ref int hardClipLowerLeftX, ref int hardClipLowerLeftY, ref int hardClipUpperRightX, ref int hardClipUpperRightY, 
-                                                   ref int outputWindowLowerLeftX, ref int outputWindowLowerLeftY, ref int outputWindowUpperRightX, ref int outputWindowUpperRightY)
-        {
-            // Note: GPIB timeouts are handled by the Main method's exception handlers.
-            // This method validates and parses the coordinate responses.
-            try
-            {
-                // Setup IO buffer - ESC.T command sets the buffer size
-                // T command parameters: threshold;size;flowXonXoff;flowEnqAck;filler
-                // T1000;6000;0;0;5800: sets threshold=1000 bytes, size=6000 bytes, no XON/XOFF, no ENQ/ACK
-                Console.WriteLine("Configuring IO buffer...");
-                gpibSession.FormattedIO.WriteLine(EscapeChar + ".T1000;6000;0;0;5800:");
-                
-                // Confirm the IO Buffer size - ESC.L command queries buffer
-                gpibSession.FormattedIO.WriteLine(EscapeChar + ".L");
-                string bufferSize = gpibSession.FormattedIO.ReadString();
-                Console.WriteLine($"IO Buffer is set to {bufferSize} bytes");
-
-                // PG IN OP - Request P1 and P2 hard clip limits
-                // PG: Page feed, IN: Initialize, OP: Output P1 and P2
-                Console.WriteLine("Reading hard clip limits (P1, P2)...");
-                gpibSession.FormattedIO.WriteLine("PG;IN;OP;");
-                string hardClipResponse = gpibSession.FormattedIO.ReadString();
-
-                if (string.IsNullOrWhiteSpace(hardClipResponse))
-                {
-                    throw new InvalidOperationException("Failed to read P1/P2 coordinates - empty response");
-                }
-
-                string[] values = hardClipResponse.Split(',');
-                
-                if (values.Length < 4)
-                {
-                    throw new InvalidOperationException($"Invalid P1/P2 response - expected 4 values, got {values.Length}");
-                }
-
-                hardClipLowerLeftX = int.Parse(values[0]);
-                hardClipLowerLeftY = int.Parse(values[1]);
-                hardClipUpperRightX = int.Parse(values[2]);
-                hardClipUpperRightY = int.Parse(values[3]);
-
-                Console.WriteLine($"P1 (hard clip lower-left): X={hardClipLowerLeftX}, Y={hardClipLowerLeftY}");
-                Console.WriteLine($"P2 (hard clip upper-right): X={hardClipUpperRightX}, Y={hardClipUpperRightY}");
-
-                // OW - Output Window command - requests current output window coordinates
-                Console.WriteLine("Reading output window (OW)...");
-                gpibSession.FormattedIO.WriteLine("OW;");
-                string outputWindowResponse = gpibSession.FormattedIO.ReadString();
-
-                if (string.IsNullOrWhiteSpace(outputWindowResponse))
-                {
-                    throw new InvalidOperationException("Failed to read OW coordinates - empty response");
-                }
-
-                values = outputWindowResponse.Split(',');
-                
-                if (values.Length < 4)
-                {
-                    throw new InvalidOperationException($"Invalid OW response - expected 4 values, got {values.Length}");
-                }
-
-                outputWindowLowerLeftX = int.Parse(values[0]);
-                outputWindowLowerLeftY = int.Parse(values[1]);
-                outputWindowUpperRightX = int.Parse(values[2]);
-                outputWindowUpperRightY = int.Parse(values[3]);
-
-                Console.WriteLine($"Output Window lower-left: X={outputWindowLowerLeftX}, Y={outputWindowLowerLeftY}");
-                Console.WriteLine($"Output Window upper-right: X={outputWindowUpperRightX}, Y={outputWindowUpperRightY}");
-
-                // Reset the timeout to 40 seconds for plotting operations
-                gpibSession.TimeoutMilliseconds = ExtendedTimeoutMs;
-                Console.WriteLine($"Timeout extended to {ExtendedTimeoutMs}ms for plotting operations");
-            }
-            catch (FormatException ex)
-            {
-                throw new InvalidOperationException("Failed to parse plotter coordinates - invalid number format", ex);
-            }
-        }
-
-        #endregion
-
         #region Plotting Sequence
 
         /// <summary>
         /// Executes the main plotting sequence with all test patterns and features.
+        /// Follows the program flow from Table 4-3: initializes plotter, reads parameters inline, then draws.
         /// This includes drawing test patterns, pen repeatability tests, and various geometric shapes.
         /// </summary>
-        /// <param name="hardClipLowerLeftX">Hard clip limit P1 X coordinate (lower-left corner)</param>
-        /// <param name="hardClipLowerLeftY">Hard clip limit P1 Y coordinate (lower-left corner)</param>
-        /// <param name="hardClipUpperRightX">Hard clip limit P2 X coordinate (upper-right corner)</param>
-        /// <param name="hardClipUpperRightY">Hard clip limit P2 Y coordinate (upper-right corner)</param>
-        /// <param name="outputWindowLowerLeftX">Output window lower-left X coordinate</param>
-        /// <param name="outputWindowLowerLeftY">Output window lower-left Y coordinate</param>
-        /// <param name="outputWindowUpperRightX">Output window upper-right X coordinate</param>
-        /// <param name="outputWindowUpperRightY">Output window upper-right Y coordinate</param>
-        private static void ExecutePlottingSequence(int hardClipLowerLeftX, int hardClipLowerLeftY, int hardClipUpperRightX, int hardClipUpperRightY, 
-                                                     int outputWindowLowerLeftX, int outputWindowLowerLeftY, int outputWindowUpperRightX, int outputWindowUpperRightY)
+        private static void ExecutePlottingSequence()
         {
+            // Variables to hold plotter coordinates (Table 4-3 lines 1640-1680)
+            int hardClipLowerLeftX = 0, hardClipLowerLeftY = 0, hardClipUpperRightX = 0, hardClipUpperRightY = 0;
+            int outputWindowLowerLeftX = 0, outputWindowLowerLeftY = 0, outputWindowUpperRightX = 0, outputWindowUpperRightY = 0;
+
             AnsiConsole.Progress()
                 .AutoClear(false)
                 .Columns(new ProgressColumn[] 
@@ -580,7 +473,32 @@ namespace ConsoleApp17090Test
                 {
                     var task = ctx.AddTask("[cyan]Executing plotting sequence[/]", maxValue: 100);
 
-                    // DRAW+ AT P1 & P2 & LABEL COORDINATES
+                    // INITIALIZE 7090A & OUTPUT P1, P2 & WINDOW COORDINATES (Table 4-3 lines 1640-1680)
+                    task.Description = "[cyan]Initializing and reading parameters[/]";
+                    
+                    // PG IN OP - Page feed, Initialize, Output P1 and P2 (Table 4-3 line 1640)
+                    gpibSession.FormattedIO.WriteLine("PG;IN;OP;");
+                    string hardClipResponse = gpibSession.FormattedIO.ReadString();
+                    
+                    // Parse P1, P2 coordinates (Table 4-3 line 1650: ENTER N; X1,Y1,X2,Y2)
+                    string[] values = hardClipResponse.Split(',');
+                    hardClipLowerLeftX = int.Parse(values[0]);
+                    hardClipLowerLeftY = int.Parse(values[1]);
+                    hardClipUpperRightX = int.Parse(values[2]);
+                    hardClipUpperRightY = int.Parse(values[3]);
+                    
+                    // OW - Output Window (Table 4-3 line 1660)
+                    gpibSession.FormattedIO.WriteLine("OW;");
+                    string outputWindowResponse = gpibSession.FormattedIO.ReadString();
+                    
+                    // Parse window coordinates (Table 4-3 line 1670: ENTER N; X3,Y3,X4,Y4)
+                    values = outputWindowResponse.Split(',');
+                    outputWindowLowerLeftX = int.Parse(values[0]);
+                    outputWindowLowerLeftY = int.Parse(values[1]);
+                    outputWindowUpperRightX = int.Parse(values[2]);
+                    outputWindowUpperRightY = int.Parse(values[3]);
+
+                    // DRAW+ AT P1 & P2 & LABEL COORDINATES (Table 4-3 lines 1690-1740)
                     task.Description = "[cyan]Drawing coordinate labels[/]";
                     // SP1: Select pen 1, PA: Plot Absolute, PD: Pen Down, SM+: Symbol mode plus, PU: Pen Up (Table 4-3)
                     gpibSession.FormattedIO.WriteLine("SP1;PA5080,4064;PD;PU;SM+;PA" + hardClipLowerLeftX + "," + hardClipLowerLeftY);
