@@ -779,42 +779,45 @@ namespace ConsoleApp17090Test
         /// </summary>
         private static void DrawDeadbandTests()
         {
-            // First deadband test (Table 4-3 lines 2820-2870)
+            // First deadband test - horizontal scale at bottom (Table 4-3 lines 2820-2870)
             DrawDeadbandScale(4280, 1750, true, 0, 0);
             
-            // Second deadband test (Table 4-3 lines 2880-2920)
+            // Second deadband test - horizontal scale at bottom (Table 4-3 lines 2880-2920)
             DrawDeadbandScale(5880, 1952, true, 2, 0);
             
-            // Draw horizontal line with arrow (Table 4-3 lines 2930-2950)
+            // Draw horizontal line with arrow between scales (Table 4-3 lines 2930-2950)
+            // Line from (4680,2200) to (5480,2200) with arrow at center pointing left
             gpibSession.FormattedIO.WriteLine("PA4680,2200;PD;PA5480,2200;PU;");
             gpibSession.FormattedIO.WriteLine("PA5080,2175;DI-1,0;CS1;CP-.33,-.75;");
-            gpibSession.FormattedIO.WriteLine("LB" + ((char)94) + EndOfTextChar); // CHR$(94) is ^
+            gpibSession.FormattedIO.WriteLine("LB" + ((char)94) + EndOfTextChar); // CHR$(94) is ^ arrow character
             
-            // Third deadband test (Table 4-3 lines 2960-3010)
+            // Third deadband test - vertical scale on left (Table 4-3 lines 2960-3010)
             DrawDeadbandScale(3210, 3200, false, 0, 0);
             
-            // Fourth deadband test (Table 4-3 lines 3020-3060)
+            // Fourth deadband test - vertical scale on left (Table 4-3 lines 3020-3060)
             DrawDeadbandScale(2998, 4800, false, 0, 2);
             
-            // Draw vertical line with arrow (Table 4-3 lines 3070-3090)
+            // Draw vertical line with arrow between scales (Table 4-3 lines 3070-3090)
+            // Line from (2950,4400) to (2950,3600) with arrow at center pointing down
             gpibSession.FormattedIO.WriteLine("PA2950,4400;PD;PA2950,3600;PU;");
             gpibSession.FormattedIO.WriteLine("PA2975,4000;DI0,-1;CP-.33,-.75;LB" + ((char)94) + EndOfTextChar);
         }
 
         /// <summary>
         /// Draws a deadband test scale at specified position (Table 4-3 lines 3130-3270).
-        /// Helper function for DrawDeadbandTests.
+        /// Helper function for DrawDeadbandTests. Variable names match Table 4-3 BASIC code.
         /// </summary>
-        /// <param name="x1">Starting X coordinate</param>
-        /// <param name="y1">Starting Y coordinate</param>
-        /// <param name="isHorizontal">True for horizontal scale, false for vertical</param>
-        /// <param name="m">M parameter for scale direction</param>
-        /// <param name="l">L parameter for scale direction</param>
+        /// <param name="x1">Starting X coordinate (X1 in BASIC)</param>
+        /// <param name="y1">Starting Y coordinate (Y1 in BASIC)</param>
+        /// <param name="isHorizontal">True for horizontal scale (A=1), false for vertical (A=0)</param>
+        /// <param name="m">M parameter for scale direction/offset from Table 4-3</param>
+        /// <param name="l">L parameter for scale direction/offset from Table 4-3</param>
         private static void DrawDeadbandScale(int x1, int y1, bool isHorizontal, int m, int l)
         {
-            int s = (m == 0 && l == 0) ? 1 : -1;
-            int i = isHorizontal ? 200 : 0;
-            int j = isHorizontal ? 0 : 200;
+            // Variable names match Table 4-3 BASIC code for accurate reimplementation
+            int s = (m == 0 && l == 0) ? 1 : -1;  // S: scale direction multiplier (Table 4-3 lines 3130-3140)
+            int i = isHorizontal ? 200 : 0;        // I: X offset increment (Table 4-3 lines 3160-3200)
+            int j = isHorizontal ? 0 : 200;        // J: Y offset increment (Table 4-3 lines 3160-3200)
             
             // Draw 9 tick marks (Table 4-3 lines 3210-3260)
             for (int k = 1; k <= 9; k++)
@@ -830,14 +833,17 @@ namespace ConsoleApp17090Test
         /// <summary>
         /// Draws pen wobble test pattern (Table 4-3 lines 3280-3490).
         /// Tests pen stability during rapid direction changes.
+        /// Variable names match Table 4-3 BASIC code (A0, A1).
         /// </summary>
         private static void DrawPenWobbleTest()
         {
-            // Start position (Table 4-3 line 3310)
+            // Start position at right side of plot (Table 4-3 line 3310)
+            // Position (10200, 1450) with pen down, velocity select, then PR (plot relative) mode
             gpibSession.FormattedIO.WriteLine("SP1;PA10200,1450;PD;VS;PR");
             
-            int a0 = 0;
-            int a1 = 200;
+            // Variable names match Table 4-3 BASIC code for accurate reimplementation
+            int a0 = 0;    // A0: no offset (always 0) from Table 4-3 line 3320
+            int a1 = 200;  // A1: zigzag amplitude (200 units) from Table 4-3 line 3330
             
             // First loop: draw zigzag pattern (Table 4-3 lines 3340-3360)
             for (int i = 1; i <= 10; i++)
