@@ -839,40 +839,44 @@ namespace ConsoleApp17090Test
         {
             // Start position at right side of plot (Table 4-3 line 3310)
             // Position (10200, 1450) with pen down, velocity select, then PR (plot relative) mode
-            gpibSession.FormattedIO.WriteLine("SP1;PA10200,1450;PD;VS;PR");
+            gpibSession.FormattedIO.Write("SP1;PA10200,1450;PD;VS;PR");
             
             // Variable names match Table 4-3 BASIC code for accurate reimplementation
             int a0 = 0;    // A0: no offset (always 0) from Table 4-3 line 3320
             int a1 = 200;  // A1: zigzag amplitude (200 units) from Table 4-3 line 3330
             
             // First loop: draw zigzag pattern (Table 4-3 lines 3340-3360)
+            // OUTPUT N USING 1600; A0,A1,-A1,A0 for each iteration
             for (int i = 1; i <= 10; i++)
             {
-                gpibSession.FormattedIO.WriteLine($"{a0},{a1},-{a1},{a0};");
+                gpibSession.FormattedIO.Write($"{a0},{a1},-{a1},{a0},");
             }
             
             // Second loop: continue zigzag (Table 4-3 lines 3370-3390)
+            // OUTPUT N USING 1600; A0,A1,A1,A0 for each iteration
             for (int i = 1; i <= 10; i++)
             {
-                gpibSession.FormattedIO.WriteLine($"{a0},{a1},{a1},{a0};");
+                gpibSession.FormattedIO.Write($"{a0},{a1},{a1},{a0},");
             }
             
             // Move and continue pattern (Table 4-3 line 3400)
-            gpibSession.FormattedIO.WriteLine("0,200;PU;PR15,-15;PD;PR");
+            gpibSession.FormattedIO.Write("0,200;PU;PR15,-15;PD;PR");
             
             // Third loop (Table 4-3 lines 3410-3430)
+            // OUTPUT N USING 1600; A0,-A1,-A1,A0 for each iteration
             for (int i = 1; i <= 9; i++)
             {
-                gpibSession.FormattedIO.WriteLine($"{a0},-{a1},-{a1},{a0};");
+                gpibSession.FormattedIO.Write($"{a0},-{a1},-{a1},{a0},");
             }
             
             // Final movement (Table 4-3 line 3440)
-            gpibSession.FormattedIO.WriteLine("0,-200,-200,0,0,-170,200,0,");
+            gpibSession.FormattedIO.Write("0,-200,-200,0,0,-170,200,0,");
             
             // Fourth loop (Table 4-3 lines 3450-3470)
+            // OUTPUT N USING 1600; A0,-A1,A1,A0 for each iteration
             for (int i = 1; i <= 9; i++)
             {
-                gpibSession.FormattedIO.WriteLine($"{a0},-{a1},{a1},{a0};");
+                gpibSession.FormattedIO.Write($"{a0},-{a1},{a1},{a0},");
             }
             
             // End position (Table 4-3 line 3480)
