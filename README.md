@@ -169,11 +169,19 @@ The program is organized into logical regions:
 
 ## Modifying the GPIB Address
 
-The default GPIB address is 6. To change it, modify the `gpibIntAddress` field in `Program.cs`:
+The default GPIB address is **6**. There are two ways to change it:
 
-```csharp
-private static int gpibIntAddress = 6;  // Change to your plotter's address
-```
+1. **At runtime (recommended)**  
+   When you run the program, use the menu option that allows you to set or change the GPIB address.  
+   This invokes the `SetGPIBAddress` logic and updates the address without needing to recompile.
+
+2. **By changing the default in code**  
+   In `Program.cs`, the default address is defined by the `DefaultGpibAddress` constant.  
+   You can change this value to match your plotter's configured address, then rebuild the program. For example:
+
+   ```csharp
+   private const int DefaultGpibAddress = 6;  // Change to your plotter's default GPIB address
+   ```
 
 ## Troubleshooting
 
