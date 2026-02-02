@@ -1,13 +1,8 @@
 ﻿using NationalInstruments.Visa;
 using Spectre.Console;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Resources;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace ConsoleApp17090Test
+namespace HP7090ATest
 {
     /// <summary>
     /// HP 7090A Performance Verification Program - Reimplementation of the HP-85 BASIC code from Table 4-3 (Paragraphs 4-12 and 4-13) in the HP 7090A Service Manual.
@@ -105,6 +100,17 @@ namespace ConsoleApp17090Test
         /// Short line segment length in repeatability test cross pattern
         /// </summary>
         private const int CrossShortSegment = 18;
+        
+        // Pen wobble test pattern parameters (from Table 4-3)
+        /// <summary>
+        /// Horizontal offset in wobble test zigzag pattern (Table 4-3: A0 = 0)
+        /// </summary>
+        private const int WobbleTestHorizontalOffset = 0;
+        
+        /// <summary>
+        /// Vertical amplitude of wobble test zigzag pattern (Table 4-3: A1 = 200)
+        /// </summary>
+        private const int WobbleTestZigzagAmplitude = 200;
         
         // Progress bar increment values for plotting sequence
         /// <summary>
@@ -403,7 +409,7 @@ namespace ConsoleApp17090Test
             resManager = new NationalInstruments.Visa.ResourceManager();
 
             // Create a GPIB session for the specified address
-            string gpibResourceName = string.Format("GPIB0::{0}::INSTR", gpibAddress);
+            string gpibResourceName = $"GPIB0::{gpibAddress}::INSTR";
             gpibSession = (GpibSession)resManager.Open(gpibResourceName);
             
             // Set timeout for plotting operations (Table 4-3 uses single timeout)
@@ -525,11 +531,11 @@ namespace ConsoleApp17090Test
                     // DRAW+ AT P1 & P2 & LABEL COORDINATES (Table 4-3 lines 1690-1740)
                     task.Description = "[cyan]Drawing coordinate labels[/]";
                     // SP1: Select pen 1, PA: Plot Absolute, PD: Pen Down, SM+: Symbol mode plus, PU: Pen Up (Table 4-3)
-                    gpibSession.FormattedIO.WriteLine("SP1;PA5080,4064;PD;PU;SM+;PA" + hardClipLowerLeftX + "," + hardClipLowerLeftY);
+                    gpibSession.FormattedIO.WriteLine($"SP1;PA5080,4064;PD;PU;SM+;PA{hardClipLowerLeftX},{hardClipLowerLeftY}");
                     // CP: Character Plot with offset, LB: Label with text (Table 4-3)
-                    gpibSession.FormattedIO.WriteLine("CP0.1,-1.3;LBP1=(" + hardClipLowerLeftX + "," + hardClipLowerLeftY + ")" + EndOfTextChar);
-                    gpibSession.FormattedIO.WriteLine("PA" + hardClipUpperRightX + "," + hardClipUpperRightY + ";SM;");
-                    gpibSession.FormattedIO.WriteLine("CP-14,-1.5;LBP2=(" + hardClipUpperRightX + "," + hardClipUpperRightY + ")" + EndOfTextChar);
+                    gpibSession.FormattedIO.WriteLine($"CP0.1,-1.3;LBP1=({hardClipLowerLeftX},{hardClipLowerLeftY}){EndOfTextChar}");
+                    gpibSession.FormattedIO.WriteLine($"PA{hardClipUpperRightX},{hardClipUpperRightY};SM;");
+                    gpibSession.FormattedIO.WriteLine($"CP-14,-1.5;LBP2=({hardClipUpperRightX},{hardClipUpperRightY}){EndOfTextChar}");
                     task.Increment(ProgressCoordinateLabels);
 
                     // Pen repeatability tests at various positions (Table 4-3 coordinates)
@@ -574,7 +580,7 @@ namespace ConsoleApp17090Test
                     // Draw "Y Axis" label vertically (Table 4-3)
                     // DI: Direction for text (0,1 = vertical)
                     task.Description = "[cyan]Drawing axis labels[/]";
-                    gpibSession.FormattedIO.WriteLine("SP3;PA600,4000;DI0,1;LBY Axis" + EndOfTextChar + ";");
+                    gpibSession.FormattedIO.WriteLine($"SP3;PA600,4000;DI0,1;LBY Axis{EndOfTextChar};");
                     gpibSession.FormattedIO.WriteLine("PA700,7366;DI;"); // Reset direction
 
                     // Draw Y-axis scale labels (15 down to 1)
@@ -585,7 +591,7 @@ namespace ConsoleApp17090Test
                             gpibSession.FormattedIO.WriteLine("CP1,0;"); // Adjust character position for single digit
                         }
 
-                        gpibSession.FormattedIO.WriteLine("LB" + i + CarriageReturnChar + EndOfTextChar + ";PR0,-400;");
+                        gpibSession.FormattedIO.WriteLine($"LB{i}{CarriageReturnChar}{EndOfTextChar};PR0,-400;");
                     }
                     task.Increment(ProgressAxisLabels);
 
@@ -604,10 +610,10 @@ namespace ConsoleApp17090Test
 
                     for (int i = 0; i < 9; i++)
                     {
-                        gpibSession.FormattedIO.WriteLine("LB" + i + CarriageReturnChar + EndOfTextChar + ";PR1016,0;");
+                        gpibSession.FormattedIO.WriteLine($"LB{i}{CarriageReturnChar}{EndOfTextChar};PR1016,0;");
                     }
 
-                    gpibSession.FormattedIO.WriteLine("PA4830,1116;LBX Axis" + EndOfTextChar);
+                    gpibSession.FormattedIO.WriteLine($"PA4830,1116;LBX Axis{EndOfTextChar}");
                     task.Increment(ProgressPenRepeatability);
                     
                     // More repeatability tests (Table 4-3 coordinates)
@@ -644,7 +650,7 @@ namespace ConsoleApp17090Test
                         int outerCircleLineY = (int)Math.Round(CircleCenterY + OuterCircleRadius * Math.Sin(radians));
 
                         // Table 4-3 lines 2080-2090: PA to inner with PD, then PA to outer with PU (draws line from inner to outer)
-                        gpibSession.FormattedIO.WriteLine("PA" + innerCircleLineX + "," + innerCircleLineY + ";PD;PA" + outerCircleLineX + "," + outerCircleLineY + ";PU;");
+                        gpibSession.FormattedIO.WriteLine($"PA{innerCircleLineX},{innerCircleLineY};PD;PA{outerCircleLineX},{outerCircleLineY};PU;");
                     }
 
                     // IW: Reset Input Window (Table 4-3 coordinates)
@@ -658,9 +664,9 @@ namespace ConsoleApp17090Test
                     task.Description = "[cyan]Drawing title labels[/]";
                     // VS: Velocity Select, SI: Absolute Character Size, SL: Slant
                     gpibSession.FormattedIO.WriteLine("SP6;PA3610,6800;");
-                    gpibSession.FormattedIO.WriteLine("VS;SI1,1.5;SL0.27;LB7090A" + EndOfTextChar + ";");
+                    gpibSession.FormattedIO.WriteLine($"VS;SI1,1.5;SL0.27;LB7090A{EndOfTextChar};");
                     gpibSession.FormattedIO.WriteLine("PA2900,6300;");
-                    gpibSession.FormattedIO.WriteLine("SI.23,.34;SL;LBPlotter Performance Verification" + EndOfTextChar + ";");
+                    gpibSession.FormattedIO.WriteLine($"SI.23,.34;SL;LBPlotter Performance Verification{EndOfTextChar};");
                     
                     // Final repeatability tests (Table 4-3 coordinates)
                     gpibSession.FormattedIO.WriteLine("PA8088,6864;");
@@ -677,7 +683,7 @@ namespace ConsoleApp17090Test
                     {
                         gpibSession.FormattedIO.Write(((char)i).ToString());
                     }
-                    gpibSession.FormattedIO.WriteLine(EndOfTextChar + ";SI;");
+                    gpibSession.FormattedIO.WriteLine($"{EndOfTextChar};SI;");
 
                     // FRAME WINDOW (Table 4-3 lines 2500-2590)
                     // Draw nested rectangles using PA/PD/VS commands (Table 4-3 loop 1 to 4)
@@ -761,7 +767,7 @@ namespace ConsoleApp17090Test
         private static void PenRepeatabilityType2(int pass)
         {
             // CP: Set character position, LB: Label with pass number
-            gpibSession.FormattedIO.WriteLine("CP.4,-.8;LB" + pass + EndOfTextChar + ";CP-1.4,.8;");
+            gpibSession.FormattedIO.WriteLine($"CP.4,-.8;LB{pass}{EndOfTextChar};CP-1.4,.8;");
             // Draw a cross: vertical line down then up, horizontal line right
             gpibSession.FormattedIO.WriteLine("PR0,512;PD0,-1024;PU-512,512;PD1024,0;PU;");
         }
@@ -786,7 +792,7 @@ namespace ConsoleApp17090Test
             // Line from (4680,2200) to (5480,2200) with arrow at center pointing left
             gpibSession.FormattedIO.WriteLine("PA4680,2200;PD;PA5480,2200;PU;");
             gpibSession.FormattedIO.WriteLine("PA5080,2175;DI-1,0;CS1;CP-.33,-.75;");
-            gpibSession.FormattedIO.WriteLine("LB" + ((char)94) + EndOfTextChar); // CHR$(94) is ^ arrow character
+            gpibSession.FormattedIO.WriteLine($"LB{(char)94}{EndOfTextChar}"); // CHR$(94) is ^ arrow character
             
             // Third deadband test - vertical scale on left (Table 4-3 lines 2960-3010)
             DrawDeadbandScale(3210, 3200, false, 0, 0);
@@ -797,40 +803,41 @@ namespace ConsoleApp17090Test
             // Draw vertical line with arrow between scales (Table 4-3 lines 3070-3090)
             // Line from (2950,4400) to (2950,3600) with arrow at center pointing down
             gpibSession.FormattedIO.WriteLine("PA2950,4400;PD;PA2950,3600;PU;");
-            gpibSession.FormattedIO.WriteLine("PA2975,4000;DI0,-1;CP-.33,-.75;LB" + ((char)94) + EndOfTextChar);
+            gpibSession.FormattedIO.WriteLine($"PA2975,4000;DI0,-1;CP-.33,-.75;LB{(char)94}{EndOfTextChar}");
         }
 
         /// <summary>
         /// Draws a deadband test scale at specified position (Table 4-3 lines 3130-3270).
-        /// Helper function for DrawDeadbandTests. Variable names match Table 4-3 BASIC code.
+        /// Deadband testing verifies pen positioning accuracy during start/stop operations.
         /// </summary>
-        /// <param name="x1">Starting X coordinate (X1 in BASIC)</param>
-        /// <param name="y1">Starting Y coordinate (Y1 in BASIC)</param>
-        /// <param name="isHorizontal">True for horizontal scale (A=1), false for vertical (A=0)</param>
-        /// <param name="m">M parameter for scale direction/offset from Table 4-3</param>
-        /// <param name="l">L parameter for scale direction/offset from Table 4-3</param>
-        private static void DrawDeadbandScale(int x1, int y1, bool isHorizontal, int m, int l)
+        /// <param name="x1">Starting X coordinate</param>
+        /// <param name="y1">Starting Y coordinate</param>
+        /// <param name="isHorizontal">True for horizontal scale, false for vertical</param>
+        /// <param name="offsetM">Scale offset M parameter - when both M and L are 0, scale draws forward; otherwise backward</param>
+        /// <param name="offsetL">Scale offset L parameter - when both M and L are 0, scale draws forward; otherwise backward</param>
+        private static void DrawDeadbandScale(int x1, int y1, bool isHorizontal, int offsetM, int offsetL)
         {
-            // Variable names match Table 4-3 BASIC code for accurate reimplementation
-            int s = (m == 0 && l == 0) ? 1 : -1;  // S: scale direction multiplier (Table 4-3 lines 3130-3140)
-            int i = isHorizontal ? 200 : 0;        // I: X offset increment (Table 4-3 lines 3160-3200)
-            int j = isHorizontal ? 0 : 200;        // J: Y offset increment (Table 4-3 lines 3160-3200)
+            // Calculate scale direction multiplier based on offsets (Table 4-3 lines 3130-3140)
+            int scaleDirection = (offsetM == 0 && offsetL == 0) ? 1 : -1;
             
-            // Draw 9 tick marks (Table 4-3 lines 3210-3260)
-            for (int k = 1; k <= 9; k++)
+            // Calculate increment values for horizontal or vertical orientation (Table 4-3 lines 3160-3200)
+            int xIncrement = isHorizontal ? 200 : 0;
+            int yIncrement = isHorizontal ? 0 : 200;
+            
+            // Draw 9 tick marks along the scale (Table 4-3 lines 3210-3260)
+            for (int tickIndex = 1; tickIndex <= 9; tickIndex++)
             {
-                int x2 = x1 + s * ((k - 1) * i + m * (5 - k));
-                int y2 = y1 + s * ((k - 1) * j + l * (5 - k));
+                int x2 = x1 + scaleDirection * ((tickIndex - 1) * xIncrement + offsetM * (5 - tickIndex));
+                int y2 = y1 + scaleDirection * ((tickIndex - 1) * yIncrement + offsetL * (5 - tickIndex));
                 
-                // Move to tick position and draw small line
-                gpibSession.FormattedIO.WriteLine($"PA{x2},{y2};PD;PA{x2 + j},{y2 + i};PU;");
+                // Move to tick position and draw perpendicular tick mark
+                gpibSession.FormattedIO.WriteLine($"PA{x2},{y2};PD;PA{x2 + yIncrement},{y2 + xIncrement};PU;");
             }
         }
 
         /// <summary>
         /// Draws pen wobble test pattern (Table 4-3 lines 3280-3490).
-        /// Tests pen stability during rapid direction changes.
-        /// Variable names match Table 4-3 BASIC code (A0, A1).
+        /// Tests pen stability during rapid direction changes by creating a zigzag pattern.
         /// </summary>
         private static void DrawPenWobbleTest()
         {
@@ -838,42 +845,34 @@ namespace ConsoleApp17090Test
             // Position (10200, 1450) with pen down, velocity select, then PR (plot relative) mode
             gpibSession.FormattedIO.Write("SP1;PA10200,1450;PD;VS;PR");
             
-            // Variable names match Table 4-3 BASIC code for accurate reimplementation
-            int a0 = 0;    // A0: no offset (always 0) from Table 4-3 line 3320
-            int a1 = 200;  // A1: zigzag amplitude (200 units) from Table 4-3 line 3330
-            
-            // First loop: draw zigzag pattern (Table 4-3 lines 3340-3360)
-            // OUTPUT N USING 1600; A0,A1,-A1,A0 for each iteration
+            // First loop: draw zigzag pattern moving up-left (Table 4-3 lines 3340-3360)
             for (int i = 1; i <= 10; i++)
             {
-                gpibSession.FormattedIO.Write($"{a0},{a1},-{a1},{a0},");
+                gpibSession.FormattedIO.Write($"{WobbleTestHorizontalOffset},{WobbleTestZigzagAmplitude},-{WobbleTestZigzagAmplitude},{WobbleTestHorizontalOffset},");
             }
             
-            // Second loop: continue zigzag (Table 4-3 lines 3370-3390)
-            // OUTPUT N USING 1600; A0,A1,A1,A0 for each iteration
+            // Second loop: continue zigzag moving up-right (Table 4-3 lines 3370-3390)
             for (int i = 1; i <= 10; i++)
             {
-                gpibSession.FormattedIO.Write($"{a0},{a1},{a1},{a0},");
+                gpibSession.FormattedIO.Write($"{WobbleTestHorizontalOffset},{WobbleTestZigzagAmplitude},{WobbleTestZigzagAmplitude},{WobbleTestHorizontalOffset},");
             }
             
             // Move and continue pattern (Table 4-3 line 3400)
             gpibSession.FormattedIO.Write("0,200;PU;PR15,-15;PD;PR");
             
-            // Third loop (Table 4-3 lines 3410-3430)
-            // OUTPUT N USING 1600; A0,-A1,-A1,A0 for each iteration
+            // Third loop: zigzag moving down-left (Table 4-3 lines 3410-3430)
             for (int i = 1; i <= 9; i++)
             {
-                gpibSession.FormattedIO.Write($"{a0},-{a1},-{a1},{a0},");
+                gpibSession.FormattedIO.Write($"{WobbleTestHorizontalOffset},-{WobbleTestZigzagAmplitude},-{WobbleTestZigzagAmplitude},{WobbleTestHorizontalOffset},");
             }
             
             // Final movement (Table 4-3 line 3440)
             gpibSession.FormattedIO.Write("0,-200,-200,0,0,-170,200,0,");
             
-            // Fourth loop (Table 4-3 lines 3450-3470)
-            // OUTPUT N USING 1600; A0,-A1,A1,A0 for each iteration
+            // Fourth loop: zigzag moving down-right (Table 4-3 lines 3450-3470)
             for (int i = 1; i <= 9; i++)
             {
-                gpibSession.FormattedIO.Write($"{a0},-{a1},{a1},{a0},");
+                gpibSession.FormattedIO.Write($"{WobbleTestHorizontalOffset},-{WobbleTestZigzagAmplitude},{WobbleTestZigzagAmplitude},{WobbleTestHorizontalOffset},");
             }
             
             // End position (Table 4-3 line 3480)
