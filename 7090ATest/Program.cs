@@ -19,12 +19,7 @@ namespace ConsoleApp17090Test
         #region Constants
         
         /// <summary>
-        /// Default GPIB timeout in milliseconds for initial operations
-        /// </summary>
-        private const int DefaultTimeoutMs = 2000;
-        
-        /// <summary>
-        /// Extended GPIB timeout in milliseconds for longer operations
+        /// GPIB timeout in milliseconds for plotting operations (Table 4-3 uses single timeout)
         /// </summary>
         private const int ExtendedTimeoutMs = 40000;
         
@@ -261,14 +256,14 @@ namespace ConsoleApp17090Test
             // Create an informational panel
             var panel = new Panel(
                 new Markup(
-                    "[yellow]Features Test Program[/]\n\n" +
-                    "A diagnostic and demonstration tool for the HP 7090A Graphics Plotter.\n\n" +
-                    "[dim]This program implements the features test described in Paragraph 2-42\n" +
-                    "of the HP 7090A Service Manual.[/]\n\n" +
+                    "[yellow]Performance Verification Program[/]\n\n" +
+                    "A diagnostic and verification tool for the HP 7090A Graphics Plotter.\n\n" +
+                    "[dim]This program implements the Performance Verification Program described in\n" +
+                    "Table 4-3 (Paragraphs 4-12 and 4-13) of the HP 7090A Service Manual.[/]\n\n" +
                     "[bold red]Prerequisites:[/]\n" +
                     $" - HP 7090A plotter connected via GPIB (current address: [cyan]{currentGpibAddress}[/])\n" +
                     " - Paper loaded in the plotter\n" +
-                    " - All 8 pens installed (recommended)\n"
+                    " - All 6 pens installed (required for HP 7090A)\n"
                 ))
             {
                 Header = new PanelHeader("[green bold]About This Program[/]"),
@@ -629,7 +624,7 @@ namespace ConsoleApp17090Test
                     // Set input window and draw box (Table 4-3 line 2050-2060)
                     gpibSession.FormattedIO.WriteLine("SP1;IW3580,2564,6580,5564;PA3580,2564;");
                     gpibSession.FormattedIO.WriteLine("PD;PR0,3000,3000,0,0,-3000,-3000,0;PU;SP5;");
-                    task.Increment(ProgressPenRepeatability);
+                    task.Increment(ProgressCircularFan);
 
                     // Draw radial lines from circle center (Table 4-3: loop 0 to 355 step 5, lines 2070-2090)
                     task.Description = "[cyan]Drawing radial lines[/]";
@@ -685,7 +680,7 @@ namespace ConsoleApp17090Test
                     gpibSession.FormattedIO.WriteLine(EndOfTextChar + ";SI;");
 
                     // FRAME WINDOW (Table 4-3 lines 2500-2590)
-                    // EA: Edge Absolute - draw a rectangle from lower-left to upper-right
+                    // Draw nested rectangles using PA/PD/VS commands (Table 4-3 loop 1 to 4)
                     task.Description = "[cyan]Drawing frame window[/]";
                     gpibSession.FormattedIO.WriteLine($"PA{CircleCenterX},{CircleCenterY};PD;PU;");
                     
