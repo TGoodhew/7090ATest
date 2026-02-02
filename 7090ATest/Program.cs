@@ -2,7 +2,7 @@
 using Spectre.Console;
 using System;
 
-namespace ConsoleApp17090Test
+namespace HP7090ATest
 {
     /// <summary>
     /// HP 7090A Performance Verification Program - Reimplementation of the HP-85 BASIC code from Table 4-3 (Paragraphs 4-12 and 4-13) in the HP 7090A Service Manual.
