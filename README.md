@@ -50,10 +50,23 @@ The program performs the following tests and demonstrations:
    - Vertical and horizontal text
    - Slanted text (7090A title)
    - Character size and direction control
+   - ASCII character set display (characters 33-127: ! through ~)
 
-5. **Frame and Window**
-   - Draws frame around the output window
+5. **Deadband Tests**
+   - Horizontal and vertical test scales
+   - Tests pen start/stop precision
+   - Verifies positioning accuracy without overshoot or undershoot
+   - Multiple scales at different orientations
+
+6. **Pen Wobble Test**
+   - Zigzag pattern to test mechanical stability
+   - Tests pen holder stability during rapid direction changes
+   - Reveals mechanical resonance or loose bearings
+
+7. **Frame and Window**
+   - Draws nested frames around the output window
    - Tests input window (IW) clipping
+   - Variable pen velocity demonstration
 
 ## Prerequisites
 
@@ -62,9 +75,12 @@ The program performs the following tests and demonstrations:
 - [NI-VISA](https://www.ni.com/en-us/support/downloads/drivers/download.ni-visa.html) libraries installed
   - Provides GPIB communication interface
   - Required for communicating with the plotter
+- [Spectre.Console](https://spectreconsole.net/) NuGet package (automatically restored during build)
+  - Provides rich terminal UI with menus, progress bars, and formatted output
 - HP 7090A Measurement Plotting System connected via HP-IB (GPIB) interface
   - GPIB address: configurable (program defaults to 6; service manual Table 4-3 recommends 5)
 - Paper loaded in the plotter (8.5 x 11 inch or A4 size recommended)
+- 6 pens recommended (program will work with fewer pens, but may have gaps in patterns)
 
 ## Building the Project
 
@@ -83,22 +99,26 @@ The project targets .NET Framework 4.7.2.
    - Powered on
    - HP-IB address configured (program defaults to 6; see "Modifying the GPIB Address" section)
    - Has paper loaded (8.5 x 11 inch paper recommended as per service manual)
-   - 6 narrow width pens installed (as specified in Table 4-3)
+   - 6 pens installed (program will work with fewer pens but may have gaps in patterns)
 
 2. Run the compiled executable:
    ```
    7090ATest.exe
    ```
 
-3. The program will:
-   - Connect to GPIB address 6 (default; configurable at runtime or in code)
-   - Configure the IO buffer
-   - Read plotter parameters
-   - Execute the plotting sequence
-   - Display progress in the console
+3. The program will display an interactive menu with options:
+   - **Set GPIB Address**: Change the GPIB address without recompiling
+   - **Launch Demo**: Run the performance verification plotting sequence
+   - **Exit**: Close the program
 
-4. Expected output:
-   - Console shows connection status and progress
+4. When you launch the demo, the program will:
+   - Connect to the configured GPIB address
+   - Read plotter parameters (P1, P2, OW)
+   - Execute the plotting sequence with progress display
+   - Draw all test patterns and return to menu
+
+5. Expected output:
+   - Console shows connection status and real-time progress with progress bar
    - Plotter produces a comprehensive test pattern
    - Total plot time: approximately 2-5 minutes depending on plotter speed
 
@@ -108,11 +128,9 @@ The project targets .NET Framework 4.7.2.
 
 The program uses the National Instruments VISA library to communicate with the plotter:
 
-1. **Initialization**: Opens HP-IB (GPIB) session at the configured address (defaults to 6)
-2. **Buffer Configuration**: Sets IO buffer to 6000 bytes using ESC.T command
-3. **Timeout Settings**: 
-   - Initial: 2 seconds for quick operations
-   - Extended: 40 seconds for plotting operations
+1. **Interactive Menu**: Displays menu with options to set GPIB address, launch demo, or exit
+2. **Initialization**: Opens HP-IB (GPIB) session at the configured address (defaults to 6)
+3. **Timeout Settings**: 40 seconds to accommodate mechanical pen movements and plotting operations
 
 ### HPGL Command Sequence
 
@@ -121,26 +139,42 @@ The program sends a carefully orchestrated sequence of HPGL commands:
 1. **Initialize**: `PG` (page feed), `IN` (initialize)
 2. **Query Parameters**: `OP` (output P1/P2), `OW` (output window)
 3. **Drawing Commands**: Various pen movements, shapes, and patterns
-4. **Finalization**: Deselects the pen with `SP0` and moves to the upper-right corner of the output window
+4. **Character Set Display**: Draws ASCII characters from 33 (!) to 127 (~)
+5. **Finalization**: Deselects the pen with `SP0` and moves to the upper-right corner of the output window
 
 ### Key HPGL Commands Used
 
 | Command | Description | Example Usage |
 |---------|-------------|---------------|
-| `SP` | Select Pen | `SP1` - select pen 1 |
+| `PG` | Page Feed | `PG` - advance paper |
+| `IN` | Initialize | `IN` - reset plotter to default state |
+| `OP` | Output P1/P2 | `OP` - read hard clip limits |
+| `OW` | Output Window | `OW` - read output window coordinates |
+| `SP` | Select Pen | `SP1` - select pen 1 (SP0 deselects) |
 | `PA` | Plot Absolute | `PA5100,4064` - move to coordinates |
 | `PR` | Plot Relative | `PR100,200` - move relative to current position |
 | `PD` | Pen Down | `PD` - lower pen for drawing |
 | `PU` | Pen Up | `PU` - raise pen for moving |
 | `CI` | Circle | `CI608` - draw circle with radius 608 |
-| `RR` | Rectangle Relative | `RR700,700` - draw rectangle |
-| `WG` | Wedge | `WG350,0,360,40` - draw wedge/arc |
+| `RR` | Rectangle Relative | `RR700,700` - draw filled rectangle |
+| `ER` | Edge Rectangle Relative | `ER700,700` - draw rectangle outline |
+| `WG` | Wedge | `WG350,0,360,40` - draw filled wedge/arc |
+| `EW` | Edge Wedge | `EW350,0,360,40` - draw wedge outline |
 | `LB` | Label | `LBText\x03` - draw text (ends with ETX) |
 | `FT` | Fill Type | `FT4,100,45` - set fill pattern |
+| `UF` | User-defined Fill | `UF10,5,5` - define custom fill pattern |
 | `IW` | Input Window | `IW3600,2564,6600,5564` - set clipping |
-| `SI` | Character Size | `SI1,1` - set character size |
+| `SI` | Character Size | `SI1,1` - set absolute character size |
+| `SR` | Scale Relative | `SR0.7,1.5` - set relative scale |
+| `CS` | Character Set | `CS1` - select character set |
 | `DI` | Direction | `DI0,1` - set text direction (vertical) |
+| `SL` | Slant | `SL0.27` - set text slant angle |
 | `CP` | Character Plot | `CP2,-.3` - set character offset |
+| `SM` | Symbol Mode | `SM+` - enable symbol mode |
+| `VS` | Velocity Select | `VS` or `VS40` - set pen velocity |
+| `XT` | X-axis Tick | `XT` - draw X-axis tick mark |
+| `YT` | Y-axis Tick | `YT` - draw Y-axis tick mark |
+| `PT` | Pen Thickness | `PT.5` - set pen thickness |
 
 ## Code Structure
 
@@ -157,9 +191,14 @@ The program is organized into logical regions:
 - Message display durations
 
 ### Main Workflow
-1. `InitializeGpibConnection()` - Sets up GPIB communication with validation
-2. `ExecutePlottingSequence()` - Queries plotter parameters (P1, P2, OW) and sends all plotting commands
-3. `CleanupGpibConnection()` - Properly disposes GPIB resources
+1. `Main()` - Entry point with interactive menu loop using Spectre.Console
+2. `DisplayTitle()` - Shows application title and prerequisites
+3. `ShowMenu()` - Displays menu options (Set GPIB Address, Launch Demo, Exit)
+4. `SetGPIBAddress()` - Allows runtime GPIB address configuration with validation
+5. `RunPlotterDemo()` - Orchestrates the complete plotting sequence
+6. `InitializeGpibConnection()` - Sets up GPIB communication with validation
+7. `ExecutePlottingSequence()` - Queries plotter parameters (P1, P2, OW) and sends all plotting commands
+8. `CleanupGpibConnection()` - Properly disposes GPIB resources
 
 ### Repeatability Test Functions
 - `PenRepeatabilityType1()` - Draws 8-segment star/cross pattern with validation
