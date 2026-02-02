@@ -534,7 +534,7 @@ namespace ConsoleApp17090Test
                     // CP: Character Plot with offset, LB: Label with text (Table 4-3)
                     gpibSession.FormattedIO.WriteLine("CP0.1,-1.3;LBP1=(" + hardClipLowerLeftX + "," + hardClipLowerLeftY + ")" + EndOfTextChar);
                     gpibSession.FormattedIO.WriteLine("PA" + hardClipUpperRightX + "," + hardClipUpperRightY + ";SM;");
-                    gpibSession.FormattedIO.WriteLine("CP-14,-.3;LBP2=(" + hardClipUpperRightX + "," + hardClipUpperRightY + ")" + EndOfTextChar);
+                    gpibSession.FormattedIO.WriteLine("CP-14,-1.5;LBP2=(" + hardClipUpperRightX + "," + hardClipUpperRightY + ")" + EndOfTextChar);
                     task.Increment(ProgressCoordinateLabels);
 
                     // Pen repeatability tests at various positions (Table 4-3 coordinates)
