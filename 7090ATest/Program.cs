@@ -101,6 +101,17 @@ namespace HP7090ATest
         /// </summary>
         private const int CrossShortSegment = 18;
         
+        // Pen wobble test pattern parameters (from Table 4-3)
+        /// <summary>
+        /// Horizontal offset in wobble test zigzag pattern (Table 4-3: A0 = 0)
+        /// </summary>
+        private const int WobbleTestHorizontalOffset = 0;
+        
+        /// <summary>
+        /// Vertical amplitude of wobble test zigzag pattern (Table 4-3: A1 = 200)
+        /// </summary>
+        private const int WobbleTestZigzagAmplitude = 200;
+        
         // Progress bar increment values for plotting sequence
         /// <summary>
         /// Progress increment for drawing coordinate labels
@@ -802,8 +813,8 @@ namespace HP7090ATest
         /// <param name="x1">Starting X coordinate</param>
         /// <param name="y1">Starting Y coordinate</param>
         /// <param name="isHorizontal">True for horizontal scale, false for vertical</param>
-        /// <param name="offsetM">M parameter for scale direction/offset</param>
-        /// <param name="offsetL">L parameter for scale direction/offset</param>
+        /// <param name="offsetM">Scale offset M parameter - when both M and L are 0, scale draws forward; otherwise backward</param>
+        /// <param name="offsetL">Scale offset L parameter - when both M and L are 0, scale draws forward; otherwise backward</param>
         private static void DrawDeadbandScale(int x1, int y1, bool isHorizontal, int offsetM, int offsetL)
         {
             // Calculate scale direction multiplier based on offsets (Table 4-3 lines 3130-3140)
@@ -834,20 +845,16 @@ namespace HP7090ATest
             // Position (10200, 1450) with pen down, velocity select, then PR (plot relative) mode
             gpibSession.FormattedIO.Write("SP1;PA10200,1450;PD;VS;PR");
             
-            // Define zigzag pattern parameters (Table 4-3 lines 3320-3330)
-            const int horizontalOffset = 0;  // Horizontal offset in zigzag pattern (zero for vertical zigzag)
-            const int zigzagAmplitude = 200; // Vertical amplitude of zigzag pattern (200 units)
-            
             // First loop: draw zigzag pattern moving up-left (Table 4-3 lines 3340-3360)
             for (int i = 1; i <= 10; i++)
             {
-                gpibSession.FormattedIO.Write($"{horizontalOffset},{zigzagAmplitude},-{zigzagAmplitude},{horizontalOffset},");
+                gpibSession.FormattedIO.Write($"{WobbleTestHorizontalOffset},{WobbleTestZigzagAmplitude},-{WobbleTestZigzagAmplitude},{WobbleTestHorizontalOffset},");
             }
             
             // Second loop: continue zigzag moving up-right (Table 4-3 lines 3370-3390)
             for (int i = 1; i <= 10; i++)
             {
-                gpibSession.FormattedIO.Write($"{horizontalOffset},{zigzagAmplitude},{zigzagAmplitude},{horizontalOffset},");
+                gpibSession.FormattedIO.Write($"{WobbleTestHorizontalOffset},{WobbleTestZigzagAmplitude},{WobbleTestZigzagAmplitude},{WobbleTestHorizontalOffset},");
             }
             
             // Move and continue pattern (Table 4-3 line 3400)
@@ -856,7 +863,7 @@ namespace HP7090ATest
             // Third loop: zigzag moving down-left (Table 4-3 lines 3410-3430)
             for (int i = 1; i <= 9; i++)
             {
-                gpibSession.FormattedIO.Write($"{horizontalOffset},-{zigzagAmplitude},-{zigzagAmplitude},{horizontalOffset},");
+                gpibSession.FormattedIO.Write($"{WobbleTestHorizontalOffset},-{WobbleTestZigzagAmplitude},-{WobbleTestZigzagAmplitude},{WobbleTestHorizontalOffset},");
             }
             
             // Final movement (Table 4-3 line 3440)
@@ -865,7 +872,7 @@ namespace HP7090ATest
             // Fourth loop: zigzag moving down-right (Table 4-3 lines 3450-3470)
             for (int i = 1; i <= 9; i++)
             {
-                gpibSession.FormattedIO.Write($"{horizontalOffset},-{zigzagAmplitude},{zigzagAmplitude},{horizontalOffset},");
+                gpibSession.FormattedIO.Write($"{WobbleTestHorizontalOffset},-{WobbleTestZigzagAmplitude},{WobbleTestZigzagAmplitude},{WobbleTestHorizontalOffset},");
             }
             
             // End position (Table 4-3 line 3480)
