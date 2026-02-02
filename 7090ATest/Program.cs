@@ -10,20 +10,16 @@ using System.Threading.Tasks;
 namespace ConsoleApp17090Test
 {
     /// <summary>
-    /// HP 7090A Features Program - Reimplementation of the HP 7090A Features program (Para 2-42 in the 7090A Service Manual).
-    /// This program tests various plotter features including pen positioning, repeatability, and drawing capabilities.
+    /// HP 7090A Performance Verification Program - Reimplementation of the HP-85 BASIC code from Table 4-3 (Paragraphs 4-12 and 4-13) in the HP 7090A Service Manual.
+    /// This program tests the input/output (I/O) circuits of the HP 7090A, the majority of the logic circuits, and the paper and pen drive mechanisms.
+    /// Tests include pen positioning, repeatability, coordinate system accuracy, and drawing capabilities.
     /// </summary>
     class Program
     {
         #region Constants
         
         /// <summary>
-        /// Default GPIB timeout in milliseconds for initial operations
-        /// </summary>
-        private const int DefaultTimeoutMs = 2000;
-        
-        /// <summary>
-        /// Extended GPIB timeout in milliseconds for longer operations
+        /// GPIB timeout in milliseconds for plotting operations (Table 4-3 uses single timeout)
         /// </summary>
         private const int ExtendedTimeoutMs = 40000;
         
@@ -57,21 +53,21 @@ namespace ConsoleApp17090Test
         /// </summary>
         private const char CarriageReturnChar = (char)13;
         
-        // Circular fan pattern center coordinates and radii
+        // Circular fan pattern center coordinates and radii (from Table 4-3)
         /// <summary>
-        /// X coordinate of circular fan pattern center
+        /// X coordinate of circular fan pattern center (Table 4-3: 5080)
         /// </summary>
-        private const int CircleCenterX = 5100;
+        private const int CircleCenterX = 5080;
         
         /// <summary>
-        /// Y coordinate of circular fan pattern center
+        /// Y coordinate of circular fan pattern center (Table 4-3: 4064)
         /// </summary>
         private const int CircleCenterY = 4064;
         
         /// <summary>
-        /// Inner circle radius for radial line pattern
+        /// Inner circle radius for radial line pattern (Table 4-3: 400)
         /// </summary>
-        private const int InnerCircleRadius = 608;
+        private const int InnerCircleRadius = 400;
         
         /// <summary>
         /// Outer circle radius for radial line pattern
@@ -260,14 +256,14 @@ namespace ConsoleApp17090Test
             // Create an informational panel
             var panel = new Panel(
                 new Markup(
-                    "[yellow]Features Test Program[/]\n\n" +
-                    "A diagnostic and demonstration tool for the HP 7090A Graphics Plotter.\n\n" +
-                    "[dim]This program implements the features test described in Paragraph 2-42\n" +
-                    "of the HP 7090A Service Manual.[/]\n\n" +
+                    "[yellow]Performance Verification Program[/]\n\n" +
+                    "A diagnostic and verification tool for the HP 7090A Graphics Plotter.\n\n" +
+                    "[dim]This program implements the Performance Verification Program described in\n" +
+                    "Table 4-3 (Paragraphs 4-12 and 4-13) of the HP 7090A Service Manual.[/]\n\n" +
                     "[bold red]Prerequisites:[/]\n" +
                     $" - HP 7090A plotter connected via GPIB (current address: [cyan]{currentGpibAddress}[/])\n" +
                     " - Paper loaded in the plotter\n" +
-                    " - All 8 pens installed (recommended)\n"
+                    " - All 6 pens installed (required for HP 7090A)\n"
                 ))
             {
                 Header = new PanelHeader("[green bold]About This Program[/]"),
@@ -285,9 +281,6 @@ namespace ConsoleApp17090Test
         /// <param name="gpibAddress">The GPIB address to use for the plotter</param>
         private static void RunPlotterDemo(int gpibAddress)
         {
-            int hardClipLowerLeftX = 0, hardClipLowerLeftY = 0, hardClipUpperRightX = 0, hardClipUpperRightY = 0;
-            int outputWindowLowerLeftX = 0, outputWindowLowerLeftY = 0, outputWindowUpperRightX = 0, outputWindowUpperRightY = 0;
-
             try
             {
                 // Initialize GPIB communication
@@ -296,13 +289,8 @@ namespace ConsoleApp17090Test
                 Console.WriteLine("Ensure paper is loaded");
                 Console.WriteLine($"Connecting to HP 7090A at GPIB address {gpibAddress}...");
 
-                // Read plotter coordinates and parameters
-                ReadPlotterParameters(ref hardClipLowerLeftX, ref hardClipLowerLeftY, ref hardClipUpperRightX, ref hardClipUpperRightY, 
-                                      ref outputWindowLowerLeftX, ref outputWindowLowerLeftY, ref outputWindowUpperRightX, ref outputWindowUpperRightY);
-
-                // Execute the main plotting sequence
-                ExecutePlottingSequence(hardClipLowerLeftX, hardClipLowerLeftY, hardClipUpperRightX, hardClipUpperRightY, 
-                                        outputWindowLowerLeftX, outputWindowLowerLeftY, outputWindowUpperRightX, outputWindowUpperRightY);
+                // Execute the main plotting sequence (Table 4-3 flow: reads parameters inline, then draws)
+                ExecutePlottingSequence();
                 
                 WaitForUserToReturnToMenu();
             }
@@ -418,8 +406,8 @@ namespace ConsoleApp17090Test
             string gpibResourceName = string.Format("GPIB0::{0}::INSTR", gpibAddress);
             gpibSession = (GpibSession)resManager.Open(gpibResourceName);
             
-            // Set the timeout to 2 seconds for initial operations
-            gpibSession.TimeoutMilliseconds = DefaultTimeoutMs;
+            // Set timeout for plotting operations (Table 4-3 uses single timeout)
+            gpibSession.TimeoutMilliseconds = ExtendedTimeoutMs;
             gpibSession.TerminationCharacterEnabled = true;
             
             // Clear the session to ensure clean state
@@ -454,118 +442,19 @@ namespace ConsoleApp17090Test
 
         #endregion
 
-        #region Plotter Parameter Reading
-
-        /// <summary>
-        /// Reads the plotter parameters including hard clip limits (P1, P2) and output window (OW).
-        /// </summary>
-        /// <param name="hardClipLowerLeftX">Hard clip limit P1 X coordinate (lower-left corner)</param>
-        /// <param name="hardClipLowerLeftY">Hard clip limit P1 Y coordinate (lower-left corner)</param>
-        /// <param name="hardClipUpperRightX">Hard clip limit P2 X coordinate (upper-right corner)</param>
-        /// <param name="hardClipUpperRightY">Hard clip limit P2 Y coordinate (upper-right corner)</param>
-        /// <param name="outputWindowLowerLeftX">Output window lower-left X coordinate</param>
-        /// <param name="outputWindowLowerLeftY">Output window lower-left Y coordinate</param>
-        /// <param name="outputWindowUpperRightX">Output window upper-right X coordinate</param>
-        /// <param name="outputWindowUpperRightY">Output window upper-right Y coordinate</param>
-        /// <exception cref="Ivi.Visa.IOTimeoutException">Thrown when GPIB communication times out</exception>
-        private static void ReadPlotterParameters(ref int hardClipLowerLeftX, ref int hardClipLowerLeftY, ref int hardClipUpperRightX, ref int hardClipUpperRightY, 
-                                                   ref int outputWindowLowerLeftX, ref int outputWindowLowerLeftY, ref int outputWindowUpperRightX, ref int outputWindowUpperRightY)
-        {
-            // Note: GPIB timeouts are handled by the Main method's exception handlers.
-            // This method validates and parses the coordinate responses.
-            try
-            {
-                // Setup IO buffer - ESC.T command sets the buffer size
-                // T command parameters: threshold;size;flowXonXoff;flowEnqAck;filler
-                // T1000;6000;0;0;5800: sets threshold=1000 bytes, size=6000 bytes, no XON/XOFF, no ENQ/ACK
-                Console.WriteLine("Configuring IO buffer...");
-                gpibSession.FormattedIO.WriteLine(EscapeChar + ".T1000;6000;0;0;5800:");
-                
-                // Confirm the IO Buffer size - ESC.L command queries buffer
-                gpibSession.FormattedIO.WriteLine(EscapeChar + ".L");
-                string bufferSize = gpibSession.FormattedIO.ReadString();
-                Console.WriteLine($"IO Buffer is set to {bufferSize} bytes");
-
-                // PG IN OP - Request P1 and P2 hard clip limits
-                // PG: Page feed, IN: Initialize, OP: Output P1 and P2
-                Console.WriteLine("Reading hard clip limits (P1, P2)...");
-                gpibSession.FormattedIO.WriteLine("PG;IN;OP;");
-                string hardClipResponse = gpibSession.FormattedIO.ReadString();
-
-                if (string.IsNullOrWhiteSpace(hardClipResponse))
-                {
-                    throw new InvalidOperationException("Failed to read P1/P2 coordinates - empty response");
-                }
-
-                string[] values = hardClipResponse.Split(',');
-                
-                if (values.Length < 4)
-                {
-                    throw new InvalidOperationException($"Invalid P1/P2 response - expected 4 values, got {values.Length}");
-                }
-
-                hardClipLowerLeftX = int.Parse(values[0]);
-                hardClipLowerLeftY = int.Parse(values[1]);
-                hardClipUpperRightX = int.Parse(values[2]);
-                hardClipUpperRightY = int.Parse(values[3]);
-
-                Console.WriteLine($"P1 (hard clip lower-left): X={hardClipLowerLeftX}, Y={hardClipLowerLeftY}");
-                Console.WriteLine($"P2 (hard clip upper-right): X={hardClipUpperRightX}, Y={hardClipUpperRightY}");
-
-                // OW - Output Window command - requests current output window coordinates
-                Console.WriteLine("Reading output window (OW)...");
-                gpibSession.FormattedIO.WriteLine("OW;");
-                string outputWindowResponse = gpibSession.FormattedIO.ReadString();
-
-                if (string.IsNullOrWhiteSpace(outputWindowResponse))
-                {
-                    throw new InvalidOperationException("Failed to read OW coordinates - empty response");
-                }
-
-                values = outputWindowResponse.Split(',');
-                
-                if (values.Length < 4)
-                {
-                    throw new InvalidOperationException($"Invalid OW response - expected 4 values, got {values.Length}");
-                }
-
-                outputWindowLowerLeftX = int.Parse(values[0]);
-                outputWindowLowerLeftY = int.Parse(values[1]);
-                outputWindowUpperRightX = int.Parse(values[2]);
-                outputWindowUpperRightY = int.Parse(values[3]);
-
-                Console.WriteLine($"Output Window lower-left: X={outputWindowLowerLeftX}, Y={outputWindowLowerLeftY}");
-                Console.WriteLine($"Output Window upper-right: X={outputWindowUpperRightX}, Y={outputWindowUpperRightY}");
-
-                // Reset the timeout to 40 seconds for plotting operations
-                gpibSession.TimeoutMilliseconds = ExtendedTimeoutMs;
-                Console.WriteLine($"Timeout extended to {ExtendedTimeoutMs}ms for plotting operations");
-            }
-            catch (FormatException ex)
-            {
-                throw new InvalidOperationException("Failed to parse plotter coordinates - invalid number format", ex);
-            }
-        }
-
-        #endregion
-
         #region Plotting Sequence
 
         /// <summary>
         /// Executes the main plotting sequence with all test patterns and features.
+        /// Follows the program flow from Table 4-3: initializes plotter, reads parameters inline, then draws.
         /// This includes drawing test patterns, pen repeatability tests, and various geometric shapes.
         /// </summary>
-        /// <param name="hardClipLowerLeftX">Hard clip limit P1 X coordinate (lower-left corner)</param>
-        /// <param name="hardClipLowerLeftY">Hard clip limit P1 Y coordinate (lower-left corner)</param>
-        /// <param name="hardClipUpperRightX">Hard clip limit P2 X coordinate (upper-right corner)</param>
-        /// <param name="hardClipUpperRightY">Hard clip limit P2 Y coordinate (upper-right corner)</param>
-        /// <param name="outputWindowLowerLeftX">Output window lower-left X coordinate</param>
-        /// <param name="outputWindowLowerLeftY">Output window lower-left Y coordinate</param>
-        /// <param name="outputWindowUpperRightX">Output window upper-right X coordinate</param>
-        /// <param name="outputWindowUpperRightY">Output window upper-right Y coordinate</param>
-        private static void ExecutePlottingSequence(int hardClipLowerLeftX, int hardClipLowerLeftY, int hardClipUpperRightX, int hardClipUpperRightY, 
-                                                     int outputWindowLowerLeftX, int outputWindowLowerLeftY, int outputWindowUpperRightX, int outputWindowUpperRightY)
+        private static void ExecutePlottingSequence()
         {
+            // Variables to hold plotter coordinates (Table 4-3 lines 1640-1680)
+            int hardClipLowerLeftX = 0, hardClipLowerLeftY = 0, hardClipUpperRightX = 0, hardClipUpperRightY = 0;
+            int outputWindowLowerLeftX = 0, outputWindowLowerLeftY = 0, outputWindowUpperRightX = 0, outputWindowUpperRightY = 0;
+
             AnsiConsole.Progress()
                 .AutoClear(false)
                 .Columns(new ProgressColumn[] 
@@ -579,30 +468,85 @@ namespace ConsoleApp17090Test
                 {
                     var task = ctx.AddTask("[cyan]Executing plotting sequence[/]", maxValue: 100);
 
-                    // DRAW+ AT P1 & P2 & LABEL COORDINATES
+                    // INITIALIZE 7090A & OUTPUT P1, P2 & WINDOW COORDINATES (Table 4-3 lines 1640-1680)
+                    task.Description = "[cyan]Initializing and reading parameters[/]";
+                    
+                    try
+                    {
+                        // PG IN OP - Page feed, Initialize, Output P1 and P2 (Table 4-3 line 1640)
+                        gpibSession.FormattedIO.WriteLine("PG;IN;OP;");
+                        string hardClipResponse = gpibSession.FormattedIO.ReadString();
+                        
+                        if (string.IsNullOrWhiteSpace(hardClipResponse))
+                        {
+                            throw new InvalidOperationException("Failed to read P1/P2 coordinates - empty response");
+                        }
+                        
+                        // Parse P1, P2 coordinates (Table 4-3 line 1650: ENTER N; X1,Y1,X2,Y2)
+                        string[] values = hardClipResponse.Split(',');
+                        
+                        if (values.Length < 4)
+                        {
+                            throw new InvalidOperationException($"Invalid P1/P2 response - expected 4 values, got {values.Length}");
+                        }
+                        
+                        hardClipLowerLeftX = int.Parse(values[0]);
+                        hardClipLowerLeftY = int.Parse(values[1]);
+                        hardClipUpperRightX = int.Parse(values[2]);
+                        hardClipUpperRightY = int.Parse(values[3]);
+                        
+                        // OW - Output Window (Table 4-3 line 1660)
+                        gpibSession.FormattedIO.WriteLine("OW;");
+                        string outputWindowResponse = gpibSession.FormattedIO.ReadString();
+                        
+                        if (string.IsNullOrWhiteSpace(outputWindowResponse))
+                        {
+                            throw new InvalidOperationException("Failed to read OW coordinates - empty response");
+                        }
+                        
+                        // Parse window coordinates (Table 4-3 line 1670: ENTER N; X3,Y3,X4,Y4)
+                        values = outputWindowResponse.Split(',');
+                        
+                        if (values.Length < 4)
+                        {
+                            throw new InvalidOperationException($"Invalid OW response - expected 4 values, got {values.Length}");
+                        }
+                        
+                        outputWindowLowerLeftX = int.Parse(values[0]);
+                        outputWindowLowerLeftY = int.Parse(values[1]);
+                        outputWindowUpperRightX = int.Parse(values[2]);
+                        outputWindowUpperRightY = int.Parse(values[3]);
+                    }
+                    catch (FormatException ex)
+                    {
+                        throw new InvalidOperationException("Failed to parse plotter coordinates - invalid number format", ex);
+                    }
+
+                    // DRAW+ AT P1 & P2 & LABEL COORDINATES (Table 4-3 lines 1690-1740)
                     task.Description = "[cyan]Drawing coordinate labels[/]";
-                    // SP1: Select pen 1, PA: Plot Absolute, PD: Pen Down, SM+: Symbol mode plus, PU: Pen Up
-                    gpibSession.FormattedIO.WriteLine("SP1;PA5100,4064;PD;SM+;PU" + hardClipLowerLeftX + "," + hardClipLowerLeftY);
-                    // CP: Character Plot with offset, LB: Label with text
-                    gpibSession.FormattedIO.WriteLine("CP2,-.3;LBP1=(" + hardClipLowerLeftX + "," + hardClipLowerLeftY + ")" + EndOfTextChar);
+                    // SP1: Select pen 1, PA: Plot Absolute, PD: Pen Down, SM+: Symbol mode plus, PU: Pen Up (Table 4-3)
+                    gpibSession.FormattedIO.WriteLine("SP1;PA5080,4064;PD;PU;SM+;PA" + hardClipLowerLeftX + "," + hardClipLowerLeftY);
+                    // CP: Character Plot with offset, LB: Label with text (Table 4-3)
+                    gpibSession.FormattedIO.WriteLine("CP0.1,-1.3;LBP1=(" + hardClipLowerLeftX + "," + hardClipLowerLeftY + ")" + EndOfTextChar);
                     gpibSession.FormattedIO.WriteLine("PA" + hardClipUpperRightX + "," + hardClipUpperRightY + ";SM;");
-                    gpibSession.FormattedIO.WriteLine("CP-16,-.3;LBP2=(" + hardClipUpperRightX + "," + hardClipUpperRightY + ")" + EndOfTextChar);
+                    gpibSession.FormattedIO.WriteLine("CP-14,-1.5;LBP2=(" + hardClipUpperRightX + "," + hardClipUpperRightY + ")" + EndOfTextChar);
                     task.Increment(ProgressCoordinateLabels);
 
-                    // Pen repeatability tests at various positions
+                    // Pen repeatability tests at various positions (Table 4-3 coordinates)
+                    // Tests are labeled to show pairs at same location for repeatability verification
                     task.Description = "[cyan]Drawing pen repeatability tests (1)[/]";
-                    gpibSession.FormattedIO.WriteLine("PA2032,6236;");
-                    PenRepeatabilityType1(1); // This routine is called multiple times and creates a cross that shows the pens hitting the same points
-                    gpibSession.FormattedIO.WriteLine("PA8128,1892;");
-                    PenRepeatabilityType2(1); // Same idea as the previous one but a slightly different process
+                    gpibSession.FormattedIO.WriteLine("PA2022,2464;");
+                    PenRepeatabilityType1(1); // Left-bottom, first test (pair 1/3)
+                    gpibSession.FormattedIO.WriteLine("PA8088,4664;");
+                    PenRepeatabilityType2(1); // Right-middle, pen 1 of pair 5/1
 
                     // FT4: Fill type 4, RR: Rectangle Relative, SP2: Select pen 2, ER: Edge Rectangle Relative
                     gpibSession.FormattedIO.WriteLine("FT4,100,45;PA9372,6440;RR700,700;SP2;ER700,700");
                     task.Increment(ProgressPenRepeatability);
 
-                    // DRAW & LABEL AXIS
+                    // DRAW & LABEL AXIS (Table 4-3 coordinates)
                     task.Description = "[cyan]Drawing axis grid[/]";
-                    gpibSession.FormattedIO.WriteLine("PA9124,1016;PD;");
+                    gpibSession.FormattedIO.WriteLine("SP2;PA9184,1416;PD;");
                     // Draw X-axis tick marks
                     for (int i = 0; i < 8; i++)
                     {
@@ -616,22 +560,22 @@ namespace ConsoleApp17090Test
                     }
                     task.Increment(ProgressAxisGrid);
 
-                    // More pen repeatability tests
+                    // More pen repeatability tests (Table 4-3 coordinates)
                     task.Description = "[cyan]Drawing pen repeatability tests (2)[/]";
-                    gpibSession.FormattedIO.WriteLine("PU;PA2032,4788;");
-                    PenRepeatabilityType1(2);
-                    gpibSession.FormattedIO.WriteLine("PA8128,3340;");
-                    PenRepeatabilityType2(2);
+                    gpibSession.FormattedIO.WriteLine("PU;PA2022,4664;");
+                    PenRepeatabilityType1(2); // Left-middle, first test (pair 2/4)
+                    gpibSession.FormattedIO.WriteLine("PA8088,6864;");
+                    PenRepeatabilityType2(2); // Right-top, pen 2 of pair 6/2
 
                     // WG: Wedge, EW: Edge Wedge
                     gpibSession.FormattedIO.WriteLine("FT4,50,90;PA9722,5600;WG350,0,360,40;SP3;EW350,0,360,40;");
                     task.Increment(ProgressPenRepeatability);
                     
-                    // Draw "Centimetres" label vertically
+                    // Draw "Y Axis" label vertically (Table 4-3)
                     // DI: Direction for text (0,1 = vertical)
                     task.Description = "[cyan]Drawing axis labels[/]";
-                    gpibSession.FormattedIO.WriteLine("SP3;PA600,3500;DI0,1;LBCentimetres" + EndOfTextChar + ";");
-                    gpibSession.FormattedIO.WriteLine("PA700,6966;DI;"); // Reset direction
+                    gpibSession.FormattedIO.WriteLine("SP3;PA600,4000;DI0,1;LBY Axis" + EndOfTextChar + ";");
+                    gpibSession.FormattedIO.WriteLine("PA700,7366;DI;"); // Reset direction
 
                     // Draw Y-axis scale labels (15 down to 1)
                     for (int i = 15; i > 0; i--)
@@ -645,113 +589,127 @@ namespace ConsoleApp17090Test
                     }
                     task.Increment(ProgressAxisLabels);
 
-                    // Continue with more test patterns
+                    // Continue with more test patterns (Table 4-3 coordinates)
                     task.Description = "[cyan]Drawing pen repeatability tests (3)[/]";
-                    gpibSession.FormattedIO.WriteLine("PA2032,3340;");
-                    PenRepeatabilityType1(3);
-                    gpibSession.FormattedIO.WriteLine("PA8128,4788;");
-                    PenRepeatabilityType2(3);
+                    gpibSession.FormattedIO.WriteLine("PA2022,6864;");
+                    PenRepeatabilityType1(3); // Left-top, first test (pair 3/5)
+                    gpibSession.FormattedIO.WriteLine("PA2022,2464;");
+                    PenRepeatabilityType2(3); // Left-bottom, second test (pair 1/3)
 
                     // UF: User-defined Fill, PT: Pen Thickness
                     gpibSession.FormattedIO.WriteLine("UF10,5,5;FT5;PA9722,4060;PT.5;WG700,60,60;");
                     
-                    // Draw X-axis scale labels (0 through 7)
-                    gpibSession.FormattedIO.WriteLine("PA948,756;SP4;");
+                    // Draw X-axis scale labels (0 through 8) - Table 4-3
+                    gpibSession.FormattedIO.WriteLine("PA1032,1156;SP4;");
 
-                    for (int i = 0; i < 8; i++)
+                    for (int i = 0; i < 9; i++)
                     {
                         gpibSession.FormattedIO.WriteLine("LB" + i + CarriageReturnChar + EndOfTextChar + ";PR1016,0;");
                     }
 
-                    gpibSession.FormattedIO.WriteLine("PA4810,516;LBInches" + EndOfTextChar);
+                    gpibSession.FormattedIO.WriteLine("PA4830,1116;LBX Axis" + EndOfTextChar);
                     task.Increment(ProgressPenRepeatability);
                     
-                    // More repeatability tests
+                    // More repeatability tests (Table 4-3 coordinates)
                     task.Description = "[cyan]Drawing pen repeatability tests (4)[/]";
-                    gpibSession.FormattedIO.WriteLine("PA2032,1892;");
-                    PenRepeatabilityType1(4);
-                    gpibSession.FormattedIO.WriteLine("PA8128,6236;");
-                    PenRepeatabilityType2(4);
+                    gpibSession.FormattedIO.WriteLine("PA8088,2464;");
+                    PenRepeatabilityType1(4); // Right-bottom, first test (pair 4/6)
+                    gpibSession.FormattedIO.WriteLine("PA2022,4664;");
+                    PenRepeatabilityType2(4); // Left-middle, second test (pair 2/4)
 
-                    // More geometric patterns
-                    gpibSession.FormattedIO.WriteLine("UF12,8;FT5;PA9722,3570;PT.5;WG700,240,60;SP5;EW700,240,60;");
-                    gpibSession.FormattedIO.WriteLine("PU8128,6236;");
-                    PenRepeatabilityType1(5);
-                    gpibSession.FormattedIO.WriteLine("PA2032,1892;");
-                    PenRepeatabilityType2(5);
-                    task.Increment(ProgressPenRepeatability);
-
-                    // DRAW CIRCULAR FAN
+                    // DRAW CIRCULAR FAN (Table 4-3)
                     task.Description = "[cyan]Drawing circular fan pattern[/]";
-                    // PM0: Polygon mode 0 (start), CI: Circle
-                    gpibSession.FormattedIO.WriteLine($"PA{CircleCenterX},{CircleCenterY};PM0;");
-
-                    for (int i = 108; i <= InnerCircleRadius; i += 100)
-                    {
-                        gpibSession.FormattedIO.WriteLine("CI" + i + ";PM1;"); // PM1: Polygon mode 1 (continue)
-                    }
-
-                    // PM2: Polygon mode 2 (end), FP: Fill Polygon, EP: Edge Polygon
-                    gpibSession.FormattedIO.WriteLine("PM2;UF;FT5;FP;SP6;EP;SP7;");
-                    gpibSession.FormattedIO.WriteLine("PA8128,3340;");
-                    PenRepeatabilityType1(7);
-                    gpibSession.FormattedIO.WriteLine("PA2031,4788;");
-                    PenRepeatabilityType2(7);
-
-                    // IW: Input Window, ER: Edge Rectangle
-                    gpibSession.FormattedIO.WriteLine("IW3600,2564,6600,5564;PA3600,2564;ER3000,3000;SP8;");
+                    // Position at center for circular fan
+                    gpibSession.FormattedIO.WriteLine($"SP4;PA{CircleCenterX},{CircleCenterY};");
+                    // Set input window and draw box (Table 4-3 line 2050-2060)
+                    gpibSession.FormattedIO.WriteLine("SP1;IW3580,2564,6580,5564;PA3580,2564;");
+                    gpibSession.FormattedIO.WriteLine("PD;PR0,3000,3000,0,0,-3000,-3000,0;PU;SP5;");
                     task.Increment(ProgressCircularFan);
 
-                    // Draw radial lines from circle center
+                    // Draw radial lines from circle center (Table 4-3: loop 0 to 355 step 5, lines 2070-2090)
                     task.Description = "[cyan]Drawing radial lines[/]";
                     // Conversion factor from degrees to radians for trigonometric functions
                     double degreesToRadiansConversion = Math.PI / 180.0;
 
-                    for (int i = 0; i < 360; i += 15)
+                    for (int i = 0; i <= 355; i += 5)
                     {
                         double radians = i * degreesToRadiansConversion;
 
-                        // Calculate the edge of the inner circle using InnerCircleRadius
+                        // Calculate the edge of the inner circle using InnerCircleRadius (400)
                         int innerCircleLineX = (int)Math.Round(CircleCenterX + InnerCircleRadius * Math.Cos(radians));
                         int innerCircleLineY = (int)Math.Round(CircleCenterY + InnerCircleRadius * Math.Sin(radians));
                         
-                        // Calculate the outer edge using OuterCircleRadius
+                        // Calculate the outer edge using OuterCircleRadius (2200)
                         int outerCircleLineX = (int)Math.Round(CircleCenterX + OuterCircleRadius * Math.Cos(radians));
                         int outerCircleLineY = (int)Math.Round(CircleCenterY + OuterCircleRadius * Math.Sin(radians));
 
-                        gpibSession.FormattedIO.WriteLine("PU" + innerCircleLineX + "," + innerCircleLineY + ";PD" + outerCircleLineX + "," + outerCircleLineY + ";");
+                        // Table 4-3 lines 2080-2090: PA to inner with PD, then PA to outer with PU (draws line from inner to outer)
+                        gpibSession.FormattedIO.WriteLine("PA" + innerCircleLineX + "," + innerCircleLineY + ";PD;PA" + outerCircleLineX + "," + outerCircleLineY + ";PU;");
                     }
 
-                    // IW: Reset Input Window
-                    gpibSession.FormattedIO.WriteLine("IW;PU8128,1892;");
-                    PenRepeatabilityType1(8);
-                    gpibSession.FormattedIO.WriteLine("PA2032,6236;");
-                    PenRepeatabilityType2(8);
+                    // IW: Reset Input Window (Table 4-3 coordinates)
+                    gpibSession.FormattedIO.WriteLine("IW;PA8088,4664;");
+                    PenRepeatabilityType1(5); // Right-middle, pen 5 of pair 5/1
+                    gpibSession.FormattedIO.WriteLine("PA2022,6864;");
+                    PenRepeatabilityType2(5); // Left-top, second test (pair 3/5)
                     task.Increment(ProgressRadialLines);
 
-                    // DRAW LABELS
+                    // DRAW LABELS (Table 4-3 coordinates)
                     task.Description = "[cyan]Drawing title labels[/]";
                     // VS: Velocity Select, SI: Absolute Character Size, SL: Slant
-                    gpibSession.FormattedIO.WriteLine("PA3610,6514;");
-                    gpibSession.FormattedIO.WriteLine("VS;SI1,1;SL.45;LB7090A" + EndOfTextChar + ";");
-                    gpibSession.FormattedIO.WriteLine("PA4645,1778;");
-                    gpibSession.FormattedIO.WriteLine("SI;SL;LBFeatures" + EndOfTextChar + ";");
-                    gpibSession.FormattedIO.WriteLine("CP-6,-1;LBPlot" + EndOfTextChar + ";");
+                    gpibSession.FormattedIO.WriteLine("SP6;PA3610,6800;");
+                    gpibSession.FormattedIO.WriteLine("VS;SI1,1.5;SL0.27;LB7090A" + EndOfTextChar + ";");
+                    gpibSession.FormattedIO.WriteLine("PA2900,6300;");
+                    gpibSession.FormattedIO.WriteLine("SI.23,.34;SL;LBPlotter Performance Verification" + EndOfTextChar + ";");
                     
-                    // Final repeatability tests
-                    gpibSession.FormattedIO.WriteLine("PA8128,4788;");
-                    PenRepeatabilityType1(6);
-                    gpibSession.FormattedIO.WriteLine("PA2032,3340;");
-                    PenRepeatabilityType2(6);
-                    gpibSession.FormattedIO.WriteLine("FT4,100,45;PA9372,490;RR700,700;SP1;ER700,700");
+                    // Final repeatability tests (Table 4-3 coordinates)
+                    gpibSession.FormattedIO.WriteLine("PA8088,6864;");
+                    PenRepeatabilityType1(6); // Right-top, pen 6 of pair 6/2
+                    gpibSession.FormattedIO.WriteLine("PA8088,2464;");
+                    PenRepeatabilityType2(6); // Right-bottom, second test (pair 4/6)
                     task.Increment(ProgressTitleLabels);
 
-                    // FRAME WINDOW
-                    // EA: Edge Absolute - draw a rectangle from lower-left to upper-right
+                    // CHARACTER SET DISPLAY (Table 4-3 lines 2420-2460)
+                    task.Description = "[cyan]Drawing character set[/]";
+                    gpibSession.FormattedIO.Write("PA300,600;SR0.7,1.5;SL;LB");
+                    // Display ASCII characters from 33 (!) to 127 (~)
+                    for (int i = 33; i <= 127; i++)
+                    {
+                        gpibSession.FormattedIO.Write(((char)i).ToString());
+                    }
+                    gpibSession.FormattedIO.WriteLine(EndOfTextChar + ";SI;");
+
+                    // FRAME WINDOW (Table 4-3 lines 2500-2590)
+                    // Draw nested rectangles using PA/PD/VS commands (Table 4-3 loop 1 to 4)
                     task.Description = "[cyan]Drawing frame window[/]";
-                    gpibSession.FormattedIO.WriteLine("PU" + outputWindowLowerLeftX + "," + outputWindowLowerLeftY + ";EA" + outputWindowUpperRightX + "," + outputWindowUpperRightY + ";");
-                    // CI25: Draw a circle with radius 25 at the center, SP0: Select pen 0 (pen up)
-                    gpibSession.FormattedIO.WriteLine($"PU{CircleCenterX},{CircleCenterY};CI25;SP0;PA{outputWindowUpperRightX},{outputWindowUpperRightY};");
+                    gpibSession.FormattedIO.WriteLine($"PA{CircleCenterX},{CircleCenterY};PD;PU;");
+                    
+                    // Draw nested rectangles with varying velocities (Table 4-3 loop 1 to 4)
+                    int x3 = outputWindowLowerLeftX;
+                    int y3 = outputWindowLowerLeftY;
+                    int x4 = outputWindowUpperRightX;
+                    int y4 = outputWindowUpperRightY;
+                    
+                    for (int i = 1; i <= 4; i++)
+                    {
+                        gpibSession.FormattedIO.WriteLine($"PA{x3},{y3};VS{i*10};PD;PA{x3},{y4},{x4},{y4},{x4},{y3},{x3},{y3};");
+                        x3 += 25;
+                        y3 += 25;
+                        x4 -= 25;
+                        y4 -= 25;
+                    }
+                    
+                    // DEADBAND TESTS (Table 4-3 lines 2590, 2790-3090)
+                    task.Description = "[cyan]Drawing deadband tests[/]";
+                    gpibSession.FormattedIO.WriteLine("PU;");  // Pen up before starting deadband tests
+                    DrawDeadbandTests();
+                    
+                    // PEN WOBBLE TEST (Table 4-3 lines 2600, 3280-3490)
+                    task.Description = "[cyan]Drawing pen wobble test[/]";
+                    DrawPenWobbleTest();
+                    
+                    // Final positioning: select pen 0 and move to upper right (Table 4-3 line 2610)
+                    gpibSession.FormattedIO.WriteLine($"SP0;PA{outputWindowUpperRightX},{outputWindowUpperRightY};");
                     task.Increment(ProgressFrameWindow);
                     
                     task.Description = "[green]Plotting sequence completed[/]";
@@ -806,6 +764,120 @@ namespace ConsoleApp17090Test
             gpibSession.FormattedIO.WriteLine("CP.4,-.8;LB" + pass + EndOfTextChar + ";CP-1.4,.8;");
             // Draw a cross: vertical line down then up, horizontal line right
             gpibSession.FormattedIO.WriteLine("PR0,512;PD0,-1024;PU-512,512;PD1024,0;PU;");
+        }
+
+        #endregion
+
+        #region Deadband and Pen Wobble Tests
+
+        /// <summary>
+        /// Draws deadband test scales at various positions (Table 4-3 lines 2790-3090).
+        /// Tests the pen deadband (ability to start/stop precisely).
+        /// </summary>
+        private static void DrawDeadbandTests()
+        {
+            // First deadband test - horizontal scale at bottom (Table 4-3 lines 2820-2870)
+            DrawDeadbandScale(4280, 1750, true, 0, 0);
+            
+            // Second deadband test - horizontal scale at bottom (Table 4-3 lines 2880-2920)
+            DrawDeadbandScale(5880, 1952, true, 2, 0);
+            
+            // Draw horizontal line with arrow between scales (Table 4-3 lines 2930-2950)
+            // Line from (4680,2200) to (5480,2200) with arrow at center pointing left
+            gpibSession.FormattedIO.WriteLine("PA4680,2200;PD;PA5480,2200;PU;");
+            gpibSession.FormattedIO.WriteLine("PA5080,2175;DI-1,0;CS1;CP-.33,-.75;");
+            gpibSession.FormattedIO.WriteLine("LB" + ((char)94) + EndOfTextChar); // CHR$(94) is ^ arrow character
+            
+            // Third deadband test - vertical scale on left (Table 4-3 lines 2960-3010)
+            DrawDeadbandScale(3210, 3200, false, 0, 0);
+            
+            // Fourth deadband test - vertical scale on left (Table 4-3 lines 3020-3060)
+            DrawDeadbandScale(2998, 4800, false, 0, 2);
+            
+            // Draw vertical line with arrow between scales (Table 4-3 lines 3070-3090)
+            // Line from (2950,4400) to (2950,3600) with arrow at center pointing down
+            gpibSession.FormattedIO.WriteLine("PA2950,4400;PD;PA2950,3600;PU;");
+            gpibSession.FormattedIO.WriteLine("PA2975,4000;DI0,-1;CP-.33,-.75;LB" + ((char)94) + EndOfTextChar);
+        }
+
+        /// <summary>
+        /// Draws a deadband test scale at specified position (Table 4-3 lines 3130-3270).
+        /// Helper function for DrawDeadbandTests. Variable names match Table 4-3 BASIC code.
+        /// </summary>
+        /// <param name="x1">Starting X coordinate (X1 in BASIC)</param>
+        /// <param name="y1">Starting Y coordinate (Y1 in BASIC)</param>
+        /// <param name="isHorizontal">True for horizontal scale (A=1), false for vertical (A=0)</param>
+        /// <param name="m">M parameter for scale direction/offset from Table 4-3</param>
+        /// <param name="l">L parameter for scale direction/offset from Table 4-3</param>
+        private static void DrawDeadbandScale(int x1, int y1, bool isHorizontal, int m, int l)
+        {
+            // Variable names match Table 4-3 BASIC code for accurate reimplementation
+            int s = (m == 0 && l == 0) ? 1 : -1;  // S: scale direction multiplier (Table 4-3 lines 3130-3140)
+            int i = isHorizontal ? 200 : 0;        // I: X offset increment (Table 4-3 lines 3160-3200)
+            int j = isHorizontal ? 0 : 200;        // J: Y offset increment (Table 4-3 lines 3160-3200)
+            
+            // Draw 9 tick marks (Table 4-3 lines 3210-3260)
+            for (int k = 1; k <= 9; k++)
+            {
+                int x2 = x1 + s * ((k - 1) * i + m * (5 - k));
+                int y2 = y1 + s * ((k - 1) * j + l * (5 - k));
+                
+                // Move to tick position and draw small line
+                gpibSession.FormattedIO.WriteLine($"PA{x2},{y2};PD;PA{x2 + j},{y2 + i};PU;");
+            }
+        }
+
+        /// <summary>
+        /// Draws pen wobble test pattern (Table 4-3 lines 3280-3490).
+        /// Tests pen stability during rapid direction changes.
+        /// Variable names match Table 4-3 BASIC code (A0, A1).
+        /// </summary>
+        private static void DrawPenWobbleTest()
+        {
+            // Start position at right side of plot (Table 4-3 line 3310)
+            // Position (10200, 1450) with pen down, velocity select, then PR (plot relative) mode
+            gpibSession.FormattedIO.Write("SP1;PA10200,1450;PD;VS;PR");
+            
+            // Variable names match Table 4-3 BASIC code for accurate reimplementation
+            int a0 = 0;    // A0: no offset (always 0) from Table 4-3 line 3320
+            int a1 = 200;  // A1: zigzag amplitude (200 units) from Table 4-3 line 3330
+            
+            // First loop: draw zigzag pattern (Table 4-3 lines 3340-3360)
+            // OUTPUT N USING 1600; A0,A1,-A1,A0 for each iteration
+            for (int i = 1; i <= 10; i++)
+            {
+                gpibSession.FormattedIO.Write($"{a0},{a1},-{a1},{a0},");
+            }
+            
+            // Second loop: continue zigzag (Table 4-3 lines 3370-3390)
+            // OUTPUT N USING 1600; A0,A1,A1,A0 for each iteration
+            for (int i = 1; i <= 10; i++)
+            {
+                gpibSession.FormattedIO.Write($"{a0},{a1},{a1},{a0},");
+            }
+            
+            // Move and continue pattern (Table 4-3 line 3400)
+            gpibSession.FormattedIO.Write("0,200;PU;PR15,-15;PD;PR");
+            
+            // Third loop (Table 4-3 lines 3410-3430)
+            // OUTPUT N USING 1600; A0,-A1,-A1,A0 for each iteration
+            for (int i = 1; i <= 9; i++)
+            {
+                gpibSession.FormattedIO.Write($"{a0},-{a1},-{a1},{a0},");
+            }
+            
+            // Final movement (Table 4-3 line 3440)
+            gpibSession.FormattedIO.Write("0,-200,-200,0,0,-170,200,0,");
+            
+            // Fourth loop (Table 4-3 lines 3450-3470)
+            // OUTPUT N USING 1600; A0,-A1,A1,A0 for each iteration
+            for (int i = 1; i <= 9; i++)
+            {
+                gpibSession.FormattedIO.Write($"{a0},-{a1},{a1},{a0},");
+            }
+            
+            // End position (Table 4-3 line 3480)
+            gpibSession.FormattedIO.WriteLine("0,-200;PU;");
         }
 
         #endregion
