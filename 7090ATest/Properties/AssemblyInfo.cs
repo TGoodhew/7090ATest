@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("7090ATest")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyTitle("HP 7090A Performance Verification Program")]
+[assembly: AssemblyDescription("A C# reimplementation of the HP 7090A Performance Verification test program from Table 4-3 of the HP 7090A Service Manual. Tests plotter capabilities including pen positioning accuracy, repeatability, and drawing operations through HPGL commands sent over GPIB.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("7090ATest")]
+[assembly: AssemblyProduct("HP 7090A Performance Verification Program")]
 [assembly: AssemblyCopyright("Copyright (c) 2026 Tony Goodhew")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]

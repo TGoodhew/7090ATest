@@ -158,6 +158,29 @@ namespace HP7090ATest
         // ProgressAxisLabels (10%) + ProgressCircularFan (10%) + ProgressRadialLines (10%) +
         // ProgressTitleLabels (5%) + ProgressFrameWindow (5%) = 100%
         
+        // GPIB Resource Name Format
+        /// <summary>
+        /// Format string for constructing GPIB resource name (e.g., "GPIB0::6::INSTR")
+        /// </summary>
+        private const string GpibResourceNameFormat = "GPIB0::{0}::INSTR";
+        
+        // Coordinate Response Validation
+        /// <summary>
+        /// Expected number of coordinate values in P1/P2 and OW responses
+        /// </summary>
+        private const int ExpectedCoordinateCount = 4;
+        
+        // Sleep Duration Constants
+        /// <summary>
+        /// Duration in milliseconds to display messages before continuing
+        /// </summary>
+        private const int MessageDisplayDurationMs = 1000;
+        
+        /// <summary>
+        /// Duration in milliseconds to display error messages before continuing
+        /// </summary>
+        private const int ErrorMessageDisplayDurationMs = 2000;
+        
         #endregion
 
         #region Fields
@@ -207,7 +230,7 @@ namespace HP7090ATest
                     catch (Exception ex)
                     {
                         AnsiConsole.MarkupLine($"[red]Unexpected error in operation: {ex.Message}[/]");
-                        System.Threading.Thread.Sleep(2000);
+                        System.Threading.Thread.Sleep(ErrorMessageDisplayDurationMs);
                     }
 
                     // Clear the screen & Display title
@@ -222,7 +245,7 @@ namespace HP7090ATest
             catch (Exception ex)
             {
                 AnsiConsole.MarkupLine($"[red]Fatal error: {ex.Message}[/]");
-                System.Threading.Thread.Sleep(2000);
+                System.Threading.Thread.Sleep(ErrorMessageDisplayDurationMs);
                 Environment.ExitCode = 1;
             }
         }
@@ -349,20 +372,20 @@ namespace HP7090ATest
                 );
 
                 AnsiConsole.MarkupLine("[green]GPIB Address updated.[/]");
-                System.Threading.Thread.Sleep(1000); // Pause for a moment to let the user see the message
+                System.Threading.Thread.Sleep(MessageDisplayDurationMs); // Pause for a moment to let the user see the message
 
                 return newAddress;
             }
             catch (OperationCanceledException)
             {
                 AnsiConsole.MarkupLine("[yellow]GPIB address change cancelled. Keeping current address.[/]");
-                System.Threading.Thread.Sleep(1000);
+                System.Threading.Thread.Sleep(MessageDisplayDurationMs);
                 return currentAddress;
             }
             catch (Exception ex)
             {
                 AnsiConsole.MarkupLine($"[red]Unexpected error setting GPIB address: {ex}[/]");
-                System.Threading.Thread.Sleep(1000);
+                System.Threading.Thread.Sleep(MessageDisplayDurationMs);
                 throw;
             }
         }
@@ -370,6 +393,18 @@ namespace HP7090ATest
         #endregion
 
         #region Helper Methods
+
+        /// <summary>
+        /// Validates that the GPIB session is initialized and ready for communication.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">Thrown when GPIB session is not initialized</exception>
+        private static void ValidateGpibSession()
+        {
+            if (gpibSession == null)
+            {
+                throw new InvalidOperationException("GPIB session is not initialized. Call InitializeGpibConnection first.");
+            }
+        }
 
         /// <summary>
         /// Prompts the user to press any key to return to the menu.
@@ -405,11 +440,18 @@ namespace HP7090ATest
         /// <exception cref="Ivi.Visa.VisaException">Thrown when GPIB connection cannot be established</exception>
         private static void InitializeGpibConnection(int gpibAddress)
         {
+            // Validate GPIB address range
+            if (gpibAddress < GpibAddressMin || gpibAddress > GpibAddressMax)
+            {
+                throw new ArgumentOutOfRangeException(nameof(gpibAddress), 
+                    $"GPIB address must be between {GpibAddressMin} and {GpibAddressMax}");
+            }
+
             // Setup the GPIB connection via the ResourceManager
             resManager = new NationalInstruments.Visa.ResourceManager();
 
             // Create a GPIB session for the specified address
-            string gpibResourceName = $"GPIB0::{gpibAddress}::INSTR";
+            string gpibResourceName = string.Format(GpibResourceNameFormat, gpibAddress);
             gpibSession = (GpibSession)resManager.Open(gpibResourceName);
             
             // Set timeout for plotting operations (Table 4-3 uses single timeout)
@@ -424,25 +466,41 @@ namespace HP7090ATest
 
         /// <summary>
         /// Cleans up GPIB resources and closes the connection.
+        /// Ensures proper disposal of resources even if exceptions occur.
         /// </summary>
         private static void CleanupGpibConnection()
         {
-            try
+            if (gpibSession != null)
             {
-                if (gpibSession != null)
+                try
                 {
                     gpibSession.Dispose();
                     Console.WriteLine("GPIB session closed.");
                 }
-                
-                if (resManager != null)
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Warning: Error closing GPIB session: {ex.Message}");
+                }
+                finally
+                {
+                    gpibSession = null;
+                }
+            }
+            
+            if (resManager != null)
+            {
+                try
                 {
                     resManager.Dispose();
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Warning: Error during cleanup: {ex.Message}");
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Warning: Error disposing resource manager: {ex.Message}");
+                }
+                finally
+                {
+                    resManager = null;
+                }
             }
         }
 
@@ -457,6 +515,9 @@ namespace HP7090ATest
         /// </summary>
         private static void ExecutePlottingSequence()
         {
+            // Validate GPIB session is initialized
+            ValidateGpibSession();
+
             // Variables to hold plotter coordinates (Table 4-3 lines 1640-1680)
             int hardClipLowerLeftX = 0, hardClipLowerLeftY = 0, hardClipUpperRightX = 0, hardClipUpperRightY = 0;
             int outputWindowLowerLeftX = 0, outputWindowLowerLeftY = 0, outputWindowUpperRightX = 0, outputWindowUpperRightY = 0;
@@ -491,9 +552,9 @@ namespace HP7090ATest
                         // Parse P1, P2 coordinates (Table 4-3 line 1650: ENTER N; X1,Y1,X2,Y2)
                         string[] values = hardClipResponse.Split(',');
                         
-                        if (values.Length < 4)
+                        if (values.Length < ExpectedCoordinateCount)
                         {
-                            throw new InvalidOperationException($"Invalid P1/P2 response - expected 4 values, got {values.Length}");
+                            throw new InvalidOperationException($"Invalid P1/P2 response - expected {ExpectedCoordinateCount} values, got {values.Length}");
                         }
                         
                         hardClipLowerLeftX = int.Parse(values[0]);
@@ -513,9 +574,9 @@ namespace HP7090ATest
                         // Parse window coordinates (Table 4-3 line 1670: ENTER N; X3,Y3,X4,Y4)
                         values = outputWindowResponse.Split(',');
                         
-                        if (values.Length < 4)
+                        if (values.Length < ExpectedCoordinateCount)
                         {
-                            throw new InvalidOperationException($"Invalid OW response - expected 4 values, got {values.Length}");
+                            throw new InvalidOperationException($"Invalid OW response - expected {ExpectedCoordinateCount} values, got {values.Length}");
                         }
                         
                         outputWindowLowerLeftX = int.Parse(values[0]);
@@ -732,9 +793,17 @@ namespace HP7090ATest
         /// Pen to pen repeatability test - Type 1.
         /// Draws a cross pattern with multiple pen passes to test repeatability.
         /// </summary>
-        /// <param name="pass">Pass number to label the test</param>
+        /// <param name="pass">Pass number to label the test (must be positive)</param>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when pass is not positive</exception>
         private static void PenRepeatabilityType1(int pass)
         {
+            ValidateGpibSession();
+            
+            if (pass <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(pass), "Pass number must be positive");
+            }
+
             // SI: Character size, CP: Character Plot position offset, LB: Label
             gpibSession.FormattedIO.WriteLine($"SI;CP{LabelOffsetX1},{LabelOffsetY1};LB{pass}{EndOfTextChar};CP{LabelAdjustX1},{LabelAdjustY1};");
             
@@ -763,9 +832,17 @@ namespace HP7090ATest
         /// Pen to pen repeatability test - Type 2.
         /// Draws a cross pattern using a different method to test repeatability.
         /// </summary>
-        /// <param name="pass">Pass number to label the test</param>
+        /// <param name="pass">Pass number to label the test (must be positive)</param>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when pass is not positive</exception>
         private static void PenRepeatabilityType2(int pass)
         {
+            ValidateGpibSession();
+            
+            if (pass <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(pass), "Pass number must be positive");
+            }
+
             // CP: Set character position, LB: Label with pass number
             gpibSession.FormattedIO.WriteLine($"CP.4,-.8;LB{pass}{EndOfTextChar};CP-1.4,.8;");
             // Draw a cross: vertical line down then up, horizontal line right
@@ -782,6 +859,8 @@ namespace HP7090ATest
         /// </summary>
         private static void DrawDeadbandTests()
         {
+            ValidateGpibSession();
+
             // First deadband test - horizontal scale at bottom (Table 4-3 lines 2820-2870)
             DrawDeadbandScale(4280, 1750, true, 0, 0);
             
@@ -817,6 +896,8 @@ namespace HP7090ATest
         /// <param name="offsetL">Scale offset L parameter - when both M and L are 0, scale draws forward; otherwise backward</param>
         private static void DrawDeadbandScale(int x1, int y1, bool isHorizontal, int offsetM, int offsetL)
         {
+            ValidateGpibSession();
+
             // Calculate scale direction multiplier based on offsets (Table 4-3 lines 3130-3140)
             int scaleDirection = (offsetM == 0 && offsetL == 0) ? 1 : -1;
             
@@ -841,6 +922,8 @@ namespace HP7090ATest
         /// </summary>
         private static void DrawPenWobbleTest()
         {
+            ValidateGpibSession();
+
             // Start position at right side of plot (Table 4-3 line 3310)
             // Position (10200, 1450) with pen down, velocity select, then PR (plot relative) mode
             gpibSession.FormattedIO.Write("SP1;PA10200,1450;PD;VS;PR");
