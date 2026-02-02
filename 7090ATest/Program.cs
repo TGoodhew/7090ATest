@@ -9,8 +9,12 @@ namespace HP7090ATest
 {
     /// <summary>
     /// HP 7090A Performance Verification Program - Reimplementation of the HP-85 BASIC code from Table 4-3 (Paragraphs 4-12 and 4-13) in the HP 7090A Service Manual.
+    /// 
+    /// The HP 7090A is a professional 6-pen microprocessor-controlled Measurement Plotting System manufactured by Hewlett-Packard.
+    /// It functions as a graphics plotter, data acquisition device, or conventional X-Y recorder using HP-IB (GPIB/IEEE 488) interface.
+    /// 
     /// This program tests the input/output (I/O) circuits of the HP 7090A, the majority of the logic circuits, and the paper and pen drive mechanisms.
-    /// Tests include pen positioning, repeatability, coordinate system accuracy, and drawing capabilities.
+    /// Tests include pen positioning, repeatability, coordinate system accuracy, and drawing capabilities using HPGL (Hewlett-Packard Graphics Language) commands.
     /// </summary>
     class Program
     {
@@ -50,6 +54,11 @@ namespace HP7090ATest
         /// ASCII character code for carriage return (CR)
         /// </summary>
         private const char CarriageReturnChar = (char)13;
+        
+        /// <summary>
+        /// ASCII character code for caret (^) used as arrow in deadband test labels
+        /// </summary>
+        private const char CaretChar = (char)94;
         
         // Circular fan pattern center coordinates and radii (from Table 4-3)
         /// <summary>
@@ -438,6 +447,11 @@ namespace HP7090ATest
 
         /// <summary>
         /// Initializes the GPIB connection to the HP 7090A plotter.
+        /// 
+        /// The HP 7090A uses HP-IB (GPIB/IEEE 488) interface for command and control.
+        /// Communication timeout is set to 40 seconds to accommodate slower plotting operations.
+        /// The plotter accepts HPGL (Hewlett-Packard Graphics Language) commands for drawing
+        /// and HP-RL (Hewlett-Packard Recorder Language) for data acquisition and recorder modes.
         /// </summary>
         /// <param name="gpibAddress">The GPIB address to connect to</param>
         /// <exception cref="Ivi.Visa.VisaException">Thrown when GPIB connection cannot be established</exception>
@@ -458,10 +472,11 @@ namespace HP7090ATest
             gpibSession = (GpibSession)resManager.Open(gpibResourceName);
             
             // Set timeout for plotting operations (Table 4-3 uses single timeout)
+            // HP 7090A plotting operations can be slow due to mechanical pen movements
             gpibSession.TimeoutMilliseconds = ExtendedTimeoutMs;
             gpibSession.TerminationCharacterEnabled = true;
             
-            // Clear the session to ensure clean state
+            // Clear the session to ensure clean state before sending commands
             gpibSession.Clear();
             
             Console.WriteLine($"Successfully connected to {gpibResourceName}");
@@ -514,7 +529,16 @@ namespace HP7090ATest
         /// <summary>
         /// Executes the main plotting sequence with all test patterns and features.
         /// Follows the program flow from Table 4-3: initializes plotter, reads parameters inline, then draws.
-        /// This includes drawing test patterns, pen repeatability tests, and various geometric shapes.
+        /// 
+        /// The HP 7090A plotter features:
+        /// - 6-pen carousel with automatic pen selection via HPGL SP command
+        /// - Hard clip limits (P1, P2) define the physical drawable area based on paper size
+        /// - Output window (OW) defines the current active plotting area
+        /// - Coordinate system uses plotter units (typically 0.025mm resolution)
+        /// - Input window (IW) provides clipping boundaries for geometric shapes
+        /// 
+        /// This sequence includes drawing test patterns, pen repeatability tests, deadband tests,
+        /// pen wobble tests, and various geometric shapes to verify all plotter subsystems.
         /// </summary>
         private static void ExecutePlottingSequence()
         {
@@ -794,7 +818,13 @@ namespace HP7090ATest
 
         /// <summary>
         /// Pen to pen repeatability test - Type 1.
-        /// Draws a cross pattern with multiple pen passes to test repeatability.
+        /// Draws an 8-segment star/cross pattern with multiple pen passes to test repeatability.
+        /// 
+        /// The HP 7090A uses a stepper motor-driven gantry system for precise X-Y positioning.
+        /// This test verifies that all 6 pens in the carousel align to the same coordinates
+        /// when drawing the same pattern, revealing any mechanical misalignment or backlash
+        /// in the pen positioning mechanism. The pattern uses long (247 units) and short (18 units)
+        /// segments to test positioning accuracy at different scales.
         /// </summary>
         /// <param name="pass">Pass number to label the test (must be positive)</param>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when pass is not positive</exception>
@@ -833,7 +863,12 @@ namespace HP7090ATest
 
         /// <summary>
         /// Pen to pen repeatability test - Type 2.
-        /// Draws a cross pattern using a different method to test repeatability.
+        /// Draws a simple cross pattern (vertical and horizontal lines) to test repeatability.
+        /// 
+        /// This is a complementary test to Type 1, using a simpler cross pattern with
+        /// perpendicular lines. The HP 7090A's pen mechanism should produce identical
+        /// crosses regardless of which pen is selected, verifying consistent pen-to-paper
+        /// contact and positioning across all 6 pens in the carousel.
         /// </summary>
         /// <param name="pass">Pass number to label the test (must be positive)</param>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when pass is not positive</exception>
@@ -858,7 +893,13 @@ namespace HP7090ATest
 
         /// <summary>
         /// Draws deadband test scales at various positions (Table 4-3 lines 2790-3090).
-        /// Tests the pen deadband (ability to start/stop precisely).
+        /// Tests the pen deadband (ability to start/stop precisely without overshoot or undershoot).
+        /// 
+        /// Deadband testing is critical for the HP 7090A's stepper motor control system.
+        /// The test verifies that the plotter can accurately position the pen and begin/end
+        /// pen strokes at precise coordinates without mechanical backlash or electronic timing issues.
+        /// Multiple test scales at different orientations (horizontal/vertical) and positions
+        /// ensure consistent performance across the entire plotting area.
         /// </summary>
         private static void DrawDeadbandTests()
         {
@@ -874,7 +915,7 @@ namespace HP7090ATest
             // Line from (4680,2200) to (5480,2200) with arrow at center pointing left
             gpibSession.FormattedIO.WriteLine("PA4680,2200;PD;PA5480,2200;PU;");
             gpibSession.FormattedIO.WriteLine("PA5080,2175;DI-1,0;CS1;CP-.33,-.75;");
-            gpibSession.FormattedIO.WriteLine($"LB{(char)94}{EndOfTextChar}"); // CHR$(94) is ^ arrow character
+            gpibSession.FormattedIO.WriteLine($"LB{CaretChar}{EndOfTextChar}"); // Caret (^) used as arrow character
             
             // Third deadband test - vertical scale on left (Table 4-3 lines 2960-3010)
             DrawDeadbandScale(3210, 3200, false, 0, 0);
@@ -885,12 +926,18 @@ namespace HP7090ATest
             // Draw vertical line with arrow between scales (Table 4-3 lines 3070-3090)
             // Line from (2950,4400) to (2950,3600) with arrow at center pointing down
             gpibSession.FormattedIO.WriteLine("PA2950,4400;PD;PA2950,3600;PU;");
-            gpibSession.FormattedIO.WriteLine($"PA2975,4000;DI0,-1;CP-.33,-.75;LB{(char)94}{EndOfTextChar}");
+            gpibSession.FormattedIO.WriteLine($"PA2975,4000;DI0,-1;CP-.33,-.75;LB{CaretChar}{EndOfTextChar}");
         }
 
         /// <summary>
         /// Draws a deadband test scale at specified position (Table 4-3 lines 3130-3270).
         /// Deadband testing verifies pen positioning accuracy during start/stop operations.
+        /// 
+        /// Each scale consists of 9 evenly-spaced tick marks. The HP 7090A must accurately
+        /// position the pen at each tick location and draw perpendicular marks. The scale
+        /// direction (forward/backward) and orientation (horizontal/vertical) can be configured
+        /// using offset parameters, allowing comprehensive testing of the stepper motor control
+        /// system in all quadrants and directions.
         /// </summary>
         /// <param name="x1">Starting X coordinate</param>
         /// <param name="y1">Starting Y coordinate</param>
@@ -921,7 +968,13 @@ namespace HP7090ATest
 
         /// <summary>
         /// Draws pen wobble test pattern (Table 4-3 lines 3280-3490).
-        /// Tests pen stability during rapid direction changes by creating a zigzag pattern.
+        /// Tests pen stability during rapid direction changes by creating a complex zigzag pattern.
+        /// 
+        /// The HP 7090A pen wobble test stresses the mechanical stability of the pen holder
+        /// and gantry system during high-speed direction reversals. The zigzag pattern rapidly
+        /// alternates direction, which can reveal mechanical resonance, loose bearings, or
+        /// inadequate damping in the pen positioning system. A stable plotter will produce
+        /// clean, consistent zigzag lines without oscillation or pen skipping.
         /// </summary>
         private static void DrawPenWobbleTest()
         {
