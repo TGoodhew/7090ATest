@@ -538,11 +538,12 @@ namespace ConsoleApp17090Test
                     task.Increment(ProgressCoordinateLabels);
 
                     // Pen repeatability tests at various positions (Table 4-3 coordinates)
+                    // P starts at 1 (line 1560) and increments after each GOSUB call (line 2770)
                     task.Description = "[cyan]Drawing pen repeatability tests (1)[/]";
                     gpibSession.FormattedIO.WriteLine("PA2022,2464;");
-                    PenRepeatabilityType1(1); // This routine is called multiple times and creates a cross that shows the pens hitting the same points
+                    PenRepeatabilityType1(1); // P=1
                     gpibSession.FormattedIO.WriteLine("PA8088,4664;");
-                    PenRepeatabilityType2(1); // Same idea as the previous one but a slightly different process
+                    PenRepeatabilityType2(2); // P=2
 
                     // FT4: Fill type 4, RR: Rectangle Relative, SP2: Select pen 2, ER: Edge Rectangle Relative
                     gpibSession.FormattedIO.WriteLine("FT4,100,45;PA9372,6440;RR700,700;SP2;ER700,700");
@@ -567,9 +568,9 @@ namespace ConsoleApp17090Test
                     // More pen repeatability tests (Table 4-3 coordinates)
                     task.Description = "[cyan]Drawing pen repeatability tests (2)[/]";
                     gpibSession.FormattedIO.WriteLine("PU;PA2022,4664;");
-                    PenRepeatabilityType1(2);
+                    PenRepeatabilityType1(3); // P=3
                     gpibSession.FormattedIO.WriteLine("PA8088,6864;");
-                    PenRepeatabilityType2(2);
+                    PenRepeatabilityType2(4); // P=4
 
                     // WG: Wedge, EW: Edge Wedge
                     gpibSession.FormattedIO.WriteLine("FT4,50,90;PA9722,5600;WG350,0,360,40;SP3;EW350,0,360,40;");
@@ -596,9 +597,9 @@ namespace ConsoleApp17090Test
                     // Continue with more test patterns (Table 4-3 coordinates)
                     task.Description = "[cyan]Drawing pen repeatability tests (3)[/]";
                     gpibSession.FormattedIO.WriteLine("PA2022,6864;");
-                    PenRepeatabilityType1(3);
+                    PenRepeatabilityType1(5); // P=5
                     gpibSession.FormattedIO.WriteLine("PA2022,2464;");
-                    PenRepeatabilityType2(3);
+                    PenRepeatabilityType2(6); // P=6
 
                     // UF: User-defined Fill, PT: Pen Thickness
                     gpibSession.FormattedIO.WriteLine("UF10,5,5;FT5;PA9722,4060;PT.5;WG700,60,60;");
@@ -617,9 +618,9 @@ namespace ConsoleApp17090Test
                     // More repeatability tests (Table 4-3 coordinates)
                     task.Description = "[cyan]Drawing pen repeatability tests (4)[/]";
                     gpibSession.FormattedIO.WriteLine("PA8088,2464;");
-                    PenRepeatabilityType1(4);
+                    PenRepeatabilityType1(7); // P=7
                     gpibSession.FormattedIO.WriteLine("PA2022,4664;");
-                    PenRepeatabilityType2(4);
+                    PenRepeatabilityType2(8); // P=8
 
                     // DRAW CIRCULAR FAN (Table 4-3)
                     task.Description = "[cyan]Drawing circular fan pattern[/]";
@@ -653,9 +654,9 @@ namespace ConsoleApp17090Test
 
                     // IW: Reset Input Window (Table 4-3 coordinates)
                     gpibSession.FormattedIO.WriteLine("IW;PA8088,4664;");
-                    PenRepeatabilityType1(7);
+                    PenRepeatabilityType1(9); // P=9
                     gpibSession.FormattedIO.WriteLine("PA2022,6864;");
-                    PenRepeatabilityType2(7);
+                    PenRepeatabilityType2(10); // P=10
                     task.Increment(ProgressRadialLines);
 
                     // DRAW LABELS (Table 4-3 coordinates)
@@ -668,9 +669,9 @@ namespace ConsoleApp17090Test
                     
                     // Final repeatability tests (Table 4-3 coordinates)
                     gpibSession.FormattedIO.WriteLine("PA8088,6864;");
-                    PenRepeatabilityType1(6);
+                    PenRepeatabilityType1(11); // P=11
                     gpibSession.FormattedIO.WriteLine("PA8088,2464;");
-                    PenRepeatabilityType2(6);
+                    PenRepeatabilityType2(12); // P=12
                     task.Increment(ProgressTitleLabels);
 
                     // CHARACTER SET DISPLAY (Table 4-3 lines 2420-2460)
