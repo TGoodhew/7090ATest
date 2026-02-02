@@ -835,19 +835,19 @@ namespace HP7090ATest
             gpibSession.FormattedIO.Write("SP1;PA10200,1450;PD;VS;PR");
             
             // Define zigzag pattern parameters (Table 4-3 lines 3320-3330)
-            const int noOffset = 0;          // No horizontal offset during zigzag
-            const int zigzagAmplitude = 200; // Amplitude of zigzag pattern (200 units)
+            const int horizontalOffset = 0;  // Horizontal offset in zigzag pattern (zero for vertical zigzag)
+            const int zigzagAmplitude = 200; // Vertical amplitude of zigzag pattern (200 units)
             
             // First loop: draw zigzag pattern moving up-left (Table 4-3 lines 3340-3360)
             for (int i = 1; i <= 10; i++)
             {
-                gpibSession.FormattedIO.Write($"{noOffset},{zigzagAmplitude},-{zigzagAmplitude},{noOffset},");
+                gpibSession.FormattedIO.Write($"{horizontalOffset},{zigzagAmplitude},-{zigzagAmplitude},{horizontalOffset},");
             }
             
             // Second loop: continue zigzag moving up-right (Table 4-3 lines 3370-3390)
             for (int i = 1; i <= 10; i++)
             {
-                gpibSession.FormattedIO.Write($"{noOffset},{zigzagAmplitude},{zigzagAmplitude},{noOffset},");
+                gpibSession.FormattedIO.Write($"{horizontalOffset},{zigzagAmplitude},{zigzagAmplitude},{horizontalOffset},");
             }
             
             // Move and continue pattern (Table 4-3 line 3400)
@@ -856,7 +856,7 @@ namespace HP7090ATest
             // Third loop: zigzag moving down-left (Table 4-3 lines 3410-3430)
             for (int i = 1; i <= 9; i++)
             {
-                gpibSession.FormattedIO.Write($"{noOffset},-{zigzagAmplitude},-{zigzagAmplitude},{noOffset},");
+                gpibSession.FormattedIO.Write($"{horizontalOffset},-{zigzagAmplitude},-{zigzagAmplitude},{horizontalOffset},");
             }
             
             // Final movement (Table 4-3 line 3440)
@@ -865,7 +865,7 @@ namespace HP7090ATest
             // Fourth loop: zigzag moving down-right (Table 4-3 lines 3450-3470)
             for (int i = 1; i <= 9; i++)
             {
-                gpibSession.FormattedIO.Write($"{noOffset},-{zigzagAmplitude},{zigzagAmplitude},{noOffset},");
+                gpibSession.FormattedIO.Write($"{horizontalOffset},-{zigzagAmplitude},{zigzagAmplitude},{horizontalOffset},");
             }
             
             // End position (Table 4-3 line 3480)
