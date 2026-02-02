@@ -1,4 +1,7 @@
-﻿using NationalInstruments.Visa;
+﻿// Copyright (c) 2026 Tony Goodhew. All rights reserved.
+// Licensed under the MIT License. See LICENSE.txt in the project root for license information.
+
+using NationalInstruments.Visa;
 using Spectre.Console;
 using System;
 
