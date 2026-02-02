@@ -543,7 +543,7 @@ namespace ConsoleApp17090Test
                     gpibSession.FormattedIO.WriteLine("PA2022,2464;");
                     PenRepeatabilityType1(1); // Left-bottom, first test (pair 1/3)
                     gpibSession.FormattedIO.WriteLine("PA8088,4664;");
-                    PenRepeatabilityType2(1); // Right-middle, second test (pair 5/1)
+                    PenRepeatabilityType2(1); // Right-middle, pen 1 of pair 5/1
 
                     // FT4: Fill type 4, RR: Rectangle Relative, SP2: Select pen 2, ER: Edge Rectangle Relative
                     gpibSession.FormattedIO.WriteLine("FT4,100,45;PA9372,6440;RR700,700;SP2;ER700,700");
@@ -570,7 +570,7 @@ namespace ConsoleApp17090Test
                     gpibSession.FormattedIO.WriteLine("PU;PA2022,4664;");
                     PenRepeatabilityType1(2); // Left-middle, first test (pair 2/4)
                     gpibSession.FormattedIO.WriteLine("PA8088,6864;");
-                    PenRepeatabilityType2(2); // Right-top, second test (pair 6/2)
+                    PenRepeatabilityType2(2); // Right-top, pen 2 of pair 6/2
 
                     // WG: Wedge, EW: Edge Wedge
                     gpibSession.FormattedIO.WriteLine("FT4,50,90;PA9722,5600;WG350,0,360,40;SP3;EW350,0,360,40;");
@@ -654,7 +654,7 @@ namespace ConsoleApp17090Test
 
                     // IW: Reset Input Window (Table 4-3 coordinates)
                     gpibSession.FormattedIO.WriteLine("IW;PA8088,4664;");
-                    PenRepeatabilityType1(5); // Right-middle, first test (pair 5/1)
+                    PenRepeatabilityType1(5); // Right-middle, pen 5 of pair 5/1
                     gpibSession.FormattedIO.WriteLine("PA2022,6864;");
                     PenRepeatabilityType2(5); // Left-top, second test (pair 3/5)
                     task.Increment(ProgressRadialLines);
@@ -669,7 +669,7 @@ namespace ConsoleApp17090Test
                     
                     // Final repeatability tests (Table 4-3 coordinates)
                     gpibSession.FormattedIO.WriteLine("PA8088,6864;");
-                    PenRepeatabilityType1(6); // Right-top, first test (pair 6/2)
+                    PenRepeatabilityType1(6); // Right-top, pen 6 of pair 6/2
                     gpibSession.FormattedIO.WriteLine("PA8088,2464;");
                     PenRepeatabilityType2(6); // Right-bottom, second test (pair 4/6)
                     task.Increment(ProgressTitleLabels);
