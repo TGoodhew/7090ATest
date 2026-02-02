@@ -701,7 +701,7 @@ namespace HP7090ATest
                         gpibSession.FormattedIO.WriteLine($"LB{i}{CarriageReturnChar}{EndOfTextChar};PR1016,0;");
                     }
 
-                    gpibSession.FormattedIO.WriteLine($"PA4830,1116;LBX Axis{EndOfTextChar}");
+                    gpibSession.FormattedIO.WriteLine($"PA4830,905;LBX Axis{EndOfTextChar}");
                     task.Increment(ProgressPenRepeatability);
                     
                     // More repeatability tests (Table 4-3 coordinates)
