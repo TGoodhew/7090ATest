@@ -710,6 +710,7 @@ namespace HP7090ATest
                     PenRepeatabilityType1(4); // Right-bottom, first test (pair 4/6)
                     gpibSession.FormattedIO.WriteLine("PA2022,4664;");
                     PenRepeatabilityType2(4); // Left-middle, second test (pair 2/4)
+                    task.Increment(ProgressPenRepeatability);
 
                     // DRAW CIRCULAR FAN (Table 4-3)
                     task.Description = "[cyan]Drawing circular fan pattern[/]";
