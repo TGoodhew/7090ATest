@@ -592,7 +592,7 @@ namespace HP7090ATest
                     // DRAW+ AT P1 & P2 & LABEL COORDINATES (Table 4-3 lines 1690-1740)
                     task.Description = "[cyan]Drawing coordinate labels[/]";
                     // SP1: Select pen 1, PA: Plot Absolute, PD: Pen Down, SM+: Symbol mode plus, PU: Pen Up (Table 4-3)
-                    gpibSession.FormattedIO.WriteLine($"SP1;PA5080,4064;PD;PU;SM+;PA{hardClipLowerLeftX},{hardClipLowerLeftY}");
+                    gpibSession.FormattedIO.WriteLine($"SP1;PA{CircleCenterX},{CircleCenterY};PD;PU;SM+;PA{hardClipLowerLeftX},{hardClipLowerLeftY}");
                     // CP: Character Plot with offset, LB: Label with text (Table 4-3)
                     gpibSession.FormattedIO.WriteLine($"CP0.1,-1.3;LBP1=({hardClipLowerLeftX},{hardClipLowerLeftY}){EndOfTextChar}");
                     gpibSession.FormattedIO.WriteLine($"PA{hardClipUpperRightX},{hardClipUpperRightY};SM;");

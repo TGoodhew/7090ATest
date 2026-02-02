@@ -147,26 +147,37 @@ The program sends a carefully orchestrated sequence of HPGL commands:
 The program is organized into logical regions:
 
 ### Constants
-- GPIB timeouts
+- GPIB timeouts and address ranges
 - ASCII control characters (ESC, ETX, CR)
 - Circular fan pattern parameters
 - Label positioning offsets
 - Cross pattern dimensions
+- Progress bar increment values
+- GPIB resource name format
+- Message display durations
 
 ### Main Workflow
-1. `InitializeGpibConnection()` - Sets up GPIB communication
-2. `ReadPlotterParameters()` - Queries plotter for P1, P2, and OW
-3. `ExecutePlottingSequence()` - Sends all plotting commands
-4. `CleanupGpibConnection()` - Closes GPIB resources
+1. `InitializeGpibConnection()` - Sets up GPIB communication with validation
+2. `ExecutePlottingSequence()` - Queries plotter parameters (P1, P2, OW) and sends all plotting commands
+3. `CleanupGpibConnection()` - Properly disposes GPIB resources
 
 ### Repeatability Test Functions
-- `PenRepeatabilityType1()` - Draws 8-segment star/cross pattern
-- `PenRepeatabilityType2()` - Draws simple cross pattern
+- `PenRepeatabilityType1()` - Draws 8-segment star/cross pattern with validation
+- `PenRepeatabilityType2()` - Draws simple cross pattern with validation
+
+### Deadband and Wobble Test Functions
+- `DrawDeadbandTests()` - Draws deadband test scales at various positions
+- `DrawDeadbandScale()` - Draws individual deadband test scales
+- `DrawPenWobbleTest()` - Tests pen stability during rapid direction changes
 
 ### Error Handling
-- Catches GPIB timeouts
-- Validates coordinate responses
-- Provides detailed error messages
+- Validates GPIB address range before connection
+- Validates GPIB session initialization before use
+- Validates method parameters (e.g., pass numbers must be positive)
+- Catches GPIB timeouts with detailed error messages
+- Validates coordinate responses with proper error reporting
+- Provides detailed error messages with inner exception details
+- Ensures proper resource cleanup even when errors occur
 
 ## Modifying the GPIB Address
 
