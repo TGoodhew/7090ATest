@@ -396,7 +396,7 @@ namespace HP7090ATest
             }
             catch (Exception ex)
             {
-                AnsiConsole.MarkupLine($"[red]Unexpected error setting GPIB address: {ex}[/]");
+                AnsiConsole.MarkupLine($"[red]Unexpected error setting GPIB address: {ex.Message}[/]");
                 System.Threading.Thread.Sleep(MessageDisplayDurationMs);
                 throw;
             }
