@@ -1,11 +1,6 @@
 ﻿using NationalInstruments.Visa;
 using Spectre.Console;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Resources;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ConsoleApp17090Test
 {
