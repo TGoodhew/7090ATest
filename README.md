@@ -99,7 +99,7 @@ The project targets .NET Framework 4.7.2.
    - Powered on
    - HP-IB address configured (program defaults to 6; see "Modifying the GPIB Address" section)
    - Has paper loaded (8.5 x 11 inch paper recommended as per service manual)
-   - 6 pens installed (program will work with fewer pens but may have gaps in patterns).
+   - 6 pens installed (program will work with fewer pens, but may have gaps in patterns).
 
 2. Run the compiled executable:
    ```
