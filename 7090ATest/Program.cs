@@ -694,14 +694,14 @@ namespace HP7090ATest
                     gpibSession.FormattedIO.WriteLine("UF10,5,5;FT5;PA9722,4060;PT.5;WG700,60,60;");
                     
                     // Draw X-axis scale labels (0 through 8) - Table 4-3
-                    gpibSession.FormattedIO.WriteLine("PA1032,1350;SP4;");
+                    gpibSession.FormattedIO.WriteLine("PA1032,1156;SP4;");
 
                     for (int i = 0; i < 9; i++)
                     {
                         gpibSession.FormattedIO.WriteLine($"LB{i}{CarriageReturnChar}{EndOfTextChar};PR1016,0;");
                     }
 
-                    gpibSession.FormattedIO.WriteLine($"PA4830,1100;LBX Axis{EndOfTextChar}");
+                    gpibSession.FormattedIO.WriteLine($"PA4830,1000;LBX Axis{EndOfTextChar}");
                     task.Increment(ProgressPenRepeatability);
                     
                     // More repeatability tests (Table 4-3 coordinates)
