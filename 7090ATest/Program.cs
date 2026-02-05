@@ -635,39 +635,27 @@ namespace HP7090ATest
                     // INITIALIZE 7090A & OUTPUT P1, P2 & WINDOW COORDINATES (Table 4-3 lines 1640-1680)
                     task.Description = "[cyan]Initializing and reading parameters[/]";
                     
-                    try
-                    {
-                        // PG IN OP - Page feed, Initialize, Output P1 and P2 (Table 4-3 line 1640)
-                        gpibSession.FormattedIO.WriteLine("PG;IN;OP;");
-                        string hardClipResponse = gpibSession.FormattedIO.ReadString();
-                        
-                        // Parse P1, P2 coordinates (Table 4-3 line 1650: ENTER N; X1,Y1,X2,Y2)
-                        int[] hardClipCoords = ParseCoordinateResponse(hardClipResponse, "P1/P2");
-                        hardClipLowerLeftX = hardClipCoords[0];
-                        hardClipLowerLeftY = hardClipCoords[1];
-                        hardClipUpperRightX = hardClipCoords[2];
-                        hardClipUpperRightY = hardClipCoords[3];
-                        
-                        // OW - Output Window (Table 4-3 line 1660)
-                        gpibSession.FormattedIO.WriteLine("OW;");
-                        string outputWindowResponse = gpibSession.FormattedIO.ReadString();
-                        
-                        // Parse window coordinates (Table 4-3 line 1670: ENTER N; X3,Y3,X4,Y4)
-                        int[] outputWindowCoords = ParseCoordinateResponse(outputWindowResponse, "OW");
-                        outputWindowLowerLeftX = outputWindowCoords[0];
-                        outputWindowLowerLeftY = outputWindowCoords[1];
-                        outputWindowUpperRightX = outputWindowCoords[2];
-                        outputWindowUpperRightY = outputWindowCoords[3];
-                    }
-                    catch (InvalidOperationException)
-                    {
-                        // Re-throw coordinate parsing errors as-is with detailed context
-                        throw;
-                    }
-                    catch (FormatException ex)
-                    {
-                        throw new InvalidOperationException("Failed to parse plotter coordinates - invalid number format", ex);
-                    }
+                    // PG IN OP - Page feed, Initialize, Output P1 and P2 (Table 4-3 line 1640)
+                    gpibSession.FormattedIO.WriteLine("PG;IN;OP;");
+                    string hardClipResponse = gpibSession.FormattedIO.ReadString();
+                    
+                    // Parse P1, P2 coordinates (Table 4-3 line 1650: ENTER N; X1,Y1,X2,Y2)
+                    int[] hardClipCoords = ParseCoordinateResponse(hardClipResponse, "P1/P2");
+                    hardClipLowerLeftX = hardClipCoords[0];
+                    hardClipLowerLeftY = hardClipCoords[1];
+                    hardClipUpperRightX = hardClipCoords[2];
+                    hardClipUpperRightY = hardClipCoords[3];
+                    
+                    // OW - Output Window (Table 4-3 line 1660)
+                    gpibSession.FormattedIO.WriteLine("OW;");
+                    string outputWindowResponse = gpibSession.FormattedIO.ReadString();
+                    
+                    // Parse window coordinates (Table 4-3 line 1670: ENTER N; X3,Y3,X4,Y4)
+                    int[] outputWindowCoords = ParseCoordinateResponse(outputWindowResponse, "OW");
+                    outputWindowLowerLeftX = outputWindowCoords[0];
+                    outputWindowLowerLeftY = outputWindowCoords[1];
+                    outputWindowUpperRightX = outputWindowCoords[2];
+                    outputWindowUpperRightY = outputWindowCoords[3];
 
                     // DRAW+ AT P1 & P2 & LABEL COORDINATES (Table 4-3 lines 1690-1740)
                     task.Description = "[cyan]Drawing coordinate labels[/]";
