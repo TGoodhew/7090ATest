@@ -4,6 +4,7 @@
 using NationalInstruments.Visa;
 using Spectre.Console;
 using System;
+using System.Globalization;
 
 namespace HP7090ATest
 {
@@ -476,7 +477,7 @@ namespace HP7090ATest
                 int[] coordinates = new int[ExpectedCoordinateCount];
                 for (int i = 0; i < ExpectedCoordinateCount; i++)
                 {
-                    coordinates[i] = int.Parse(values[i]);
+                    coordinates[i] = int.Parse(values[i], CultureInfo.InvariantCulture);
                 }
                 return coordinates;
             }
