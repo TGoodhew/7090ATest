@@ -4,6 +4,7 @@
 using NationalInstruments.Visa;
 using Spectre.Console;
 using System;
+using System.Globalization;
 
 namespace HP7090ATest
 {
@@ -83,22 +84,22 @@ namespace HP7090ATest
         
         // Character positioning offsets for repeatability test labels
         /// <summary>
-        /// Character plot X offset for repeatability test label (Type 1)
+        /// Character plot X offset for repeatability test label - Type 1 (in character widths)
         /// </summary>
         private const double LabelOffsetX1 = -1.2;
         
         /// <summary>
-        /// Character plot Y offset for repeatability test label (Type 1)
+        /// Character plot Y offset for repeatability test label - Type 1 (in character heights)
         /// </summary>
         private const double LabelOffsetY1 = 0.4;
         
         /// <summary>
-        /// Character plot X adjustment after label (Type 1)
+        /// Character plot X adjustment after label - Type 1 (in character widths)
         /// </summary>
         private const double LabelAdjustX1 = 0.2;
         
         /// <summary>
-        /// Character plot Y adjustment after label (Type 1)
+        /// Character plot Y adjustment after label - Type 1 (in character heights)
         /// </summary>
         private const double LabelAdjustY1 = -0.4;
         
@@ -192,6 +193,38 @@ namespace HP7090ATest
         /// Duration in milliseconds to display error messages before continuing
         /// </summary>
         private const int ErrorMessageDisplayDurationMs = 2000;
+        
+        // Character positioning offsets for coordinate labels
+        /// <summary>
+        /// Character plot X offset for P1 coordinate label (in character widths)
+        /// </summary>
+        private const double P1LabelOffsetX = 0.1;
+        
+        /// <summary>
+        /// Character plot Y offset for P1 coordinate label (in character heights)
+        /// </summary>
+        private const double P1LabelOffsetY = -1.3;
+        
+        /// <summary>
+        /// Character plot X offset for P2 coordinate label (in character widths)
+        /// </summary>
+        private const double P2LabelOffsetX = -14;
+        
+        /// <summary>
+        /// Character plot Y offset for P2 coordinate label (in character heights)
+        /// </summary>
+        private const double P2LabelOffsetY = -1.5;
+        
+        // Angle increment for radial line pattern (Table 4-3: step 5 degrees)
+        /// <summary>
+        /// Angle increment in degrees for drawing radial lines in circular fan pattern
+        /// </summary>
+        private const int RadialLineAngleIncrement = 5;
+        
+        /// <summary>
+        /// Maximum angle in degrees for radial line pattern (0 to 355)
+        /// </summary>
+        private const int RadialLineMaxAngle = 355;
         
         #endregion
 
@@ -417,6 +450,42 @@ namespace HP7090ATest
                 throw new InvalidOperationException("GPIB session is not initialized. Call InitializeGpibConnection first.");
             }
         }
+        
+        /// <summary>
+        /// Validates and parses coordinate response from plotter with proper error handling.
+        /// </summary>
+        /// <param name="response">Raw response string from plotter containing comma-separated coordinates</param>
+        /// <param name="coordinateType">Type of coordinate being parsed (e.g., "P1/P2", "OW") for error messages</param>
+        /// <returns>Array of parsed integer coordinates</returns>
+        /// <exception cref="InvalidOperationException">Thrown when response is invalid or cannot be parsed</exception>
+        private static int[] ParseCoordinateResponse(string response, string coordinateType)
+        {
+            if (string.IsNullOrWhiteSpace(response))
+            {
+                throw new InvalidOperationException($"Failed to read {coordinateType} coordinates - empty response");
+            }
+            
+            string[] values = response.Split(',');
+            
+            if (values.Length < ExpectedCoordinateCount)
+            {
+                throw new InvalidOperationException($"Invalid {coordinateType} response - expected {ExpectedCoordinateCount} values, got {values.Length}");
+            }
+            
+            try
+            {
+                int[] coordinates = new int[ExpectedCoordinateCount];
+                for (int i = 0; i < ExpectedCoordinateCount; i++)
+                {
+                    coordinates[i] = int.Parse(values[i], CultureInfo.InvariantCulture);
+                }
+                return coordinates;
+            }
+            catch (FormatException ex)
+            {
+                throw new InvalidOperationException($"Failed to parse {coordinateType} coordinates - invalid number format in response: {response}", ex);
+            }
+        }
 
         /// <summary>
         /// Prompts the user to press any key to return to the menu.
@@ -488,6 +557,7 @@ namespace HP7090ATest
         /// </summary>
         private static void CleanupGpibConnection()
         {
+            // Dispose of GPIB session
             if (gpibSession != null)
             {
                 try
@@ -505,6 +575,7 @@ namespace HP7090ATest
                 }
             }
             
+            // Dispose of resource manager
             if (resManager != null)
             {
                 try
@@ -565,65 +636,36 @@ namespace HP7090ATest
                     // INITIALIZE 7090A & OUTPUT P1, P2 & WINDOW COORDINATES (Table 4-3 lines 1640-1680)
                     task.Description = "[cyan]Initializing and reading parameters[/]";
                     
-                    try
-                    {
-                        // PG IN OP - Page feed, Initialize, Output P1 and P2 (Table 4-3 line 1640)
-                        gpibSession.FormattedIO.WriteLine("PG;IN;OP;");
-                        string hardClipResponse = gpibSession.FormattedIO.ReadString();
-                        
-                        if (string.IsNullOrWhiteSpace(hardClipResponse))
-                        {
-                            throw new InvalidOperationException("Failed to read P1/P2 coordinates - empty response");
-                        }
-                        
-                        // Parse P1, P2 coordinates (Table 4-3 line 1650: ENTER N; X1,Y1,X2,Y2)
-                        string[] values = hardClipResponse.Split(',');
-                        
-                        if (values.Length < ExpectedCoordinateCount)
-                        {
-                            throw new InvalidOperationException($"Invalid P1/P2 response - expected {ExpectedCoordinateCount} values, got {values.Length}");
-                        }
-                        
-                        hardClipLowerLeftX = int.Parse(values[0]);
-                        hardClipLowerLeftY = int.Parse(values[1]);
-                        hardClipUpperRightX = int.Parse(values[2]);
-                        hardClipUpperRightY = int.Parse(values[3]);
-                        
-                        // OW - Output Window (Table 4-3 line 1660)
-                        gpibSession.FormattedIO.WriteLine("OW;");
-                        string outputWindowResponse = gpibSession.FormattedIO.ReadString();
-                        
-                        if (string.IsNullOrWhiteSpace(outputWindowResponse))
-                        {
-                            throw new InvalidOperationException("Failed to read OW coordinates - empty response");
-                        }
-                        
-                        // Parse window coordinates (Table 4-3 line 1670: ENTER N; X3,Y3,X4,Y4)
-                        values = outputWindowResponse.Split(',');
-                        
-                        if (values.Length < ExpectedCoordinateCount)
-                        {
-                            throw new InvalidOperationException($"Invalid OW response - expected {ExpectedCoordinateCount} values, got {values.Length}");
-                        }
-                        
-                        outputWindowLowerLeftX = int.Parse(values[0]);
-                        outputWindowLowerLeftY = int.Parse(values[1]);
-                        outputWindowUpperRightX = int.Parse(values[2]);
-                        outputWindowUpperRightY = int.Parse(values[3]);
-                    }
-                    catch (FormatException ex)
-                    {
-                        throw new InvalidOperationException("Failed to parse plotter coordinates - invalid number format", ex);
-                    }
+                    // PG IN OP - Page feed, Initialize, Output P1 and P2 (Table 4-3 line 1640)
+                    gpibSession.FormattedIO.WriteLine("PG;IN;OP;");
+                    string hardClipResponse = gpibSession.FormattedIO.ReadString();
+                    
+                    // Parse P1, P2 coordinates (Table 4-3 line 1650: ENTER N; X1,Y1,X2,Y2)
+                    int[] hardClipCoords = ParseCoordinateResponse(hardClipResponse, "P1/P2");
+                    hardClipLowerLeftX = hardClipCoords[0];
+                    hardClipLowerLeftY = hardClipCoords[1];
+                    hardClipUpperRightX = hardClipCoords[2];
+                    hardClipUpperRightY = hardClipCoords[3];
+                    
+                    // OW - Output Window (Table 4-3 line 1660)
+                    gpibSession.FormattedIO.WriteLine("OW;");
+                    string outputWindowResponse = gpibSession.FormattedIO.ReadString();
+                    
+                    // Parse window coordinates (Table 4-3 line 1670: ENTER N; X3,Y3,X4,Y4)
+                    int[] outputWindowCoords = ParseCoordinateResponse(outputWindowResponse, "OW");
+                    outputWindowLowerLeftX = outputWindowCoords[0];
+                    outputWindowLowerLeftY = outputWindowCoords[1];
+                    outputWindowUpperRightX = outputWindowCoords[2];
+                    outputWindowUpperRightY = outputWindowCoords[3];
 
                     // DRAW+ AT P1 & P2 & LABEL COORDINATES (Table 4-3 lines 1690-1740)
                     task.Description = "[cyan]Drawing coordinate labels[/]";
                     // SP1: Select pen 1, PA: Plot Absolute, PD: Pen Down, SM+: Symbol mode plus, PU: Pen Up (Table 4-3)
                     gpibSession.FormattedIO.WriteLine($"SP1;PA{CircleCenterX},{CircleCenterY};PD;PU;SM+;PA{hardClipLowerLeftX},{hardClipLowerLeftY}");
                     // CP: Character Plot with offset, LB: Label with text (Table 4-3)
-                    gpibSession.FormattedIO.WriteLine($"CP0.1,-1.3;LBP1=({hardClipLowerLeftX},{hardClipLowerLeftY}){EndOfTextChar}");
+                    gpibSession.FormattedIO.WriteLine($"CP{P1LabelOffsetX},{P1LabelOffsetY};LBP1=({hardClipLowerLeftX},{hardClipLowerLeftY}){EndOfTextChar}");
                     gpibSession.FormattedIO.WriteLine($"PA{hardClipUpperRightX},{hardClipUpperRightY};SM;");
-                    gpibSession.FormattedIO.WriteLine($"CP-14,-1.5;LBP2=({hardClipUpperRightX},{hardClipUpperRightY}){EndOfTextChar}");
+                    gpibSession.FormattedIO.WriteLine($"CP{P2LabelOffsetX},{P2LabelOffsetY};LBP2=({hardClipUpperRightX},{hardClipUpperRightY}){EndOfTextChar}");
                     task.Increment(ProgressCoordinateLabels);
 
                     // Pen repeatability tests at various positions (Table 4-3 coordinates)
@@ -726,7 +768,7 @@ namespace HP7090ATest
                     // Conversion factor from degrees to radians for trigonometric functions
                     double degreesToRadiansConversion = Math.PI / 180.0;
 
-                    for (int i = 0; i <= 355; i += 5)
+                    for (int i = 0; i <= RadialLineMaxAngle; i += RadialLineAngleIncrement)
                     {
                         double radians = i * degreesToRadiansConversion;
 
@@ -902,6 +944,7 @@ namespace HP7090ATest
         /// Multiple test scales at different orientations (horizontal/vertical) and positions
         /// ensure consistent performance across the entire plotting area.
         /// </summary>
+        /// <exception cref="InvalidOperationException">Thrown when GPIB session is not initialized</exception>
         private static void DrawDeadbandTests()
         {
             ValidateGpibSession();
@@ -945,6 +988,7 @@ namespace HP7090ATest
         /// <param name="isHorizontal">True for horizontal scale, false for vertical</param>
         /// <param name="offsetM">Scale offset M parameter - when both M and L are 0, scale draws forward; otherwise backward</param>
         /// <param name="offsetL">Scale offset L parameter - when both M and L are 0, scale draws forward; otherwise backward</param>
+        /// <exception cref="InvalidOperationException">Thrown when GPIB session is not initialized</exception>
         private static void DrawDeadbandScale(int x1, int y1, bool isHorizontal, int offsetM, int offsetL)
         {
             ValidateGpibSession();
@@ -977,6 +1021,7 @@ namespace HP7090ATest
         /// inadequate damping in the pen positioning system. A stable plotter will produce
         /// clean, consistent zigzag lines without oscillation or pen skipping.
         /// </summary>
+        /// <exception cref="InvalidOperationException">Thrown when GPIB session is not initialized</exception>
         private static void DrawPenWobbleTest()
         {
             ValidateGpibSession();

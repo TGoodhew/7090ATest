@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RuleSet Name="HP 7090A Test Code Analysis Rules" Description="Code analysis rules for the HP 7090A test program" ToolsVersion="17.0">
+  <Rules AnalyzerId="Microsoft.CodeAnalysis.CSharp" RuleNamespace="Microsoft.CodeAnalysis.CSharp">
+    <!-- Design Rules -->
+    <Rule Id="CA1001" Action="Warning" /> <!-- Types that own disposable fields should be disposable -->
+    <Rule Id="CA1009" Action="Warning" /> <!-- Declare event handlers correctly -->
+    <Rule Id="CA1016" Action="Warning" /> <!-- Mark assemblies with assembly version -->
+    <Rule Id="CA1033" Action="Warning" /> <!-- Interface methods should be callable by child types -->
+    
+    <!-- Globalization Rules -->
+    <Rule Id="CA1303" Action="None" /> <!-- Do not pass literals as localized parameters (disabled for this project) -->
+    <Rule Id="CA1304" Action="Warning" /> <!-- Specify CultureInfo -->
+    <Rule Id="CA1305" Action="Warning" /> <!-- Specify IFormatProvider -->
+    <Rule Id="CA1307" Action="Warning" /> <!-- Specify StringComparison for clarity -->
+    
+    <!-- Naming Rules -->
+    <Rule Id="CA1707" Action="None" /> <!-- Identifiers should not contain underscores (disabled for constants) -->
+    <Rule Id="CA1710" Action="Warning" /> <!-- Identifiers should have correct suffix -->
+    <Rule Id="CA1711" Action="Warning" /> <!-- Identifiers should not have incorrect suffix -->
+    <Rule Id="CA1712" Action="Warning" /> <!-- Do not prefix enum values with type name -->
+    
+    <!-- Performance Rules -->
+    <Rule Id="CA1802" Action="Warning" /> <!-- Use literals where appropriate -->
+    <Rule Id="CA1805" Action="Warning" /> <!-- Do not initialize unnecessarily -->
+    <Rule Id="CA1810" Action="Warning" /> <!-- Initialize reference type static fields inline -->
+    <Rule Id="CA1812" Action="Warning" /> <!-- Avoid uninstantiated internal classes -->
+    <Rule Id="CA1813" Action="Warning" /> <!-- Avoid unsealed attributes -->
+    <Rule Id="CA1815" Action="Warning" /> <!-- Override equals and operator equals on value types -->
+    <Rule Id="CA1819" Action="Warning" /> <!-- Properties should not return arrays -->
+    <Rule Id="CA1822" Action="Warning" /> <!-- Mark members as static -->
+    <Rule Id="CA1823" Action="Warning" /> <!-- Avoid unused private fields -->
+    
+    <!-- Reliability Rules -->
+    <Rule Id="CA2000" Action="Warning" /> <!-- Dispose objects before losing scope -->
+    <Rule Id="CA2002" Action="Warning" /> <!-- Do not lock on objects with weak identity -->
+    <Rule Id="CA2007" Action="None" /> <!-- Consider calling ConfigureAwait (disabled for console app) -->
+    <Rule Id="CA2008" Action="Warning" /> <!-- Do not create tasks without passing a TaskScheduler -->
+    <Rule Id="CA2009" Action="Warning" /> <!-- Do not call ToImmutableCollection on an ImmutableCollection value -->
+    
+    <!-- Security Rules -->
+    <Rule Id="CA2100" Action="Warning" /> <!-- Review SQL queries for security vulnerabilities -->
+    <Rule Id="CA2109" Action="Warning" /> <!-- Review visible event handlers -->
+    <Rule Id="CA2119" Action="Warning" /> <!-- Seal methods that satisfy private interfaces -->
+    <Rule Id="CA3075" Action="Warning" /> <!-- Insecure DTD processing in XML -->
+    <Rule Id="CA5350" Action="Warning" /> <!-- Do Not Use Weak Cryptographic Algorithms -->
+    <Rule Id="CA5351" Action="Warning" /> <!-- Do Not Use Broken Cryptographic Algorithms -->
+    
+    <!-- Usage Rules -->
+    <Rule Id="CA1816" Action="Warning" /> <!-- Dispose methods should call SuppressFinalize -->
+    <Rule Id="CA2200" Action="Warning" /> <!-- Rethrow to preserve stack details -->
+    <Rule Id="CA2201" Action="Warning" /> <!-- Do not raise reserved exception types -->
+    <Rule Id="CA2207" Action="Warning" /> <!-- Initialize value type static fields inline -->
+    <Rule Id="CA2208" Action="Warning" /> <!-- Instantiate argument exceptions correctly -->
+    <Rule Id="CA2211" Action="Warning" /> <!-- Non-constant fields should not be visible -->
+    <Rule Id="CA2213" Action="Warning" /> <!-- Disposable fields should be disposed -->
+    <Rule Id="CA2214" Action="Warning" /> <!-- Do not call overridable methods in constructors -->
+    <Rule Id="CA2215" Action="Warning" /> <!-- Dispose methods should call base class dispose -->
+    <Rule Id="CA2216" Action="Warning" /> <!-- Disposable types should declare finalizer -->
+    <Rule Id="CA2217" Action="Warning" /> <!-- Do not mark enums with FlagsAttribute -->
+    <Rule Id="CA2218" Action="Warning" /> <!-- Override GetHashCode on overriding Equals -->
+    <Rule Id="CA2219" Action="Warning" /> <!-- Do not raise exceptions in finally clauses -->
+    <Rule Id="CA2225" Action="Warning" /> <!-- Operator overloads have named alternates -->
+    <Rule Id="CA2226" Action="Warning" /> <!-- Operators should have symmetrical overloads -->
+    <Rule Id="CA2227" Action="Warning" /> <!-- Collection properties should be read only -->
+    <Rule Id="CA2231" Action="Warning" /> <!-- Overload operator equals on overriding value type Equals -->
+    <Rule Id="CA2234" Action="Warning" /> <!-- Pass system uri objects instead of strings -->
+  </Rules>
+</RuleSet>
