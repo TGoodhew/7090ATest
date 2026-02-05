@@ -83,22 +83,22 @@ namespace HP7090ATest
         
         // Character positioning offsets for repeatability test labels
         /// <summary>
-        /// Character plot X offset for repeatability test label (Type 1)
+        /// Character plot X offset for repeatability test label - Type 1 (in character widths)
         /// </summary>
         private const double LabelOffsetX1 = -1.2;
         
         /// <summary>
-        /// Character plot Y offset for repeatability test label (Type 1)
+        /// Character plot Y offset for repeatability test label - Type 1 (in character heights)
         /// </summary>
         private const double LabelOffsetY1 = 0.4;
         
         /// <summary>
-        /// Character plot X adjustment after label (Type 1)
+        /// Character plot X adjustment after label - Type 1 (in character widths)
         /// </summary>
         private const double LabelAdjustX1 = 0.2;
         
         /// <summary>
-        /// Character plot Y adjustment after label (Type 1)
+        /// Character plot Y adjustment after label - Type 1 (in character heights)
         /// </summary>
         private const double LabelAdjustY1 = -0.4;
         
@@ -195,22 +195,22 @@ namespace HP7090ATest
         
         // Character positioning offsets for coordinate labels
         /// <summary>
-        /// Character plot X offset for P1 coordinate label
+        /// Character plot X offset for P1 coordinate label (in character widths)
         /// </summary>
         private const double P1LabelOffsetX = 0.1;
         
         /// <summary>
-        /// Character plot Y offset for P1 coordinate label
+        /// Character plot Y offset for P1 coordinate label (in character heights)
         /// </summary>
         private const double P1LabelOffsetY = -1.3;
         
         /// <summary>
-        /// Character plot X offset for P2 coordinate label
+        /// Character plot X offset for P2 coordinate label (in character widths)
         /// </summary>
         private const double P2LabelOffsetX = -14;
         
         /// <summary>
-        /// Character plot Y offset for P2 coordinate label
+        /// Character plot Y offset for P2 coordinate label (in character heights)
         /// </summary>
         private const double P2LabelOffsetY = -1.5;
         
