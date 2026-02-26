@@ -42,11 +42,6 @@ namespace HP7090ATest
         private const int GpibAddressMax = 30;
         
         /// <summary>
-        /// ASCII character code for escape (ESC)
-        /// </summary>
-        private const char EscapeChar = (char)27;
-        
-        /// <summary>
         /// ASCII character code for end of text (ETX)
         /// </summary>
         private const char EndOfTextChar = (char)3;
@@ -272,11 +267,13 @@ namespace HP7090ATest
                                 break;
                         }
                     }
+#pragma warning disable CA1031 // Broad catch is intentional to prevent menu loop from crashing on unexpected errors
                     catch (Exception ex)
                     {
                         AnsiConsole.MarkupLine($"[red]Unexpected error in operation: {ex.Message}[/]");
                         System.Threading.Thread.Sleep(ErrorMessageDisplayDurationMs);
                     }
+#pragma warning restore CA1031
 
                     // Clear the screen & Display title
                     DisplayTitle(gpibAddress);
@@ -287,12 +284,14 @@ namespace HP7090ATest
                 
                 AnsiConsole.MarkupLine("[yellow]Goodbye![/]");
             }
+#pragma warning disable CA1031 // Broad catch is intentional for top-level fatal error handler
             catch (Exception ex)
             {
                 AnsiConsole.MarkupLine($"[red]Fatal error: {ex.Message}[/]");
                 System.Threading.Thread.Sleep(ErrorMessageDisplayDurationMs);
                 Environment.ExitCode = 1;
             }
+#pragma warning restore CA1031
         }
 
         #region Title Page
@@ -378,11 +377,13 @@ namespace HP7090ATest
                 LogError("VISA communication error", ex);
                 WaitForUserToReturnToMenu();
             }
+#pragma warning disable CA1031 // Broad catch is intentional as a final fallback for unexpected errors
             catch (Exception ex)
             {
                 LogError("Unexpected error", ex);
                 WaitForUserToReturnToMenu();
             }
+#pragma warning restore CA1031
             finally
             {
                 // Clean up resources
@@ -537,7 +538,7 @@ namespace HP7090ATest
             resManager = new NationalInstruments.Visa.ResourceManager();
 
             // Create a GPIB session for the specified address
-            string gpibResourceName = string.Format(GpibResourceNameFormat, gpibAddress);
+            string gpibResourceName = string.Format(CultureInfo.InvariantCulture, GpibResourceNameFormat, gpibAddress);
             gpibSession = (GpibSession)resManager.Open(gpibResourceName);
             
             // Set timeout for plotting operations (Table 4-3 uses single timeout)
@@ -565,10 +566,12 @@ namespace HP7090ATest
                     gpibSession.Dispose();
                     Console.WriteLine("GPIB session closed.");
                 }
+#pragma warning disable CA1031 // Broad catch is intentional during resource cleanup/disposal
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Warning: Error closing GPIB session: {ex.Message}");
                 }
+#pragma warning restore CA1031
                 finally
                 {
                     gpibSession = null;
@@ -582,10 +585,12 @@ namespace HP7090ATest
                 {
                     resManager.Dispose();
                 }
+#pragma warning disable CA1031 // Broad catch is intentional during resource cleanup/disposal
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Warning: Error disposing resource manager: {ex.Message}");
                 }
+#pragma warning restore CA1031
                 finally
                 {
                     resManager = null;
