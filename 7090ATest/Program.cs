@@ -5,6 +5,8 @@ using NationalInstruments.Visa;
 using Spectre.Console;
 using System;
 using System.Globalization;
+using System.IO;
+using System.Text.RegularExpressions;
 
 namespace HP7090ATest
 {
@@ -265,6 +267,12 @@ namespace HP7090ATest
                             case MenuChoiceLaunchDemo:
                                 RunPlotterDemo(gpibAddress);
                                 break;
+                            case MenuChoicePlotAtWalker:
+                                RunHpglFilePlot(gpibAddress, "AT Walker", WalkerHpglRelativePath);
+                                break;
+                            case MenuChoicePlotShuttle:
+                                RunHpglFilePlot(gpibAddress, "Shuttle", ShuttleHpglRelativePath);
+                                break;
                         }
                     }
 #pragma warning disable CA1031 // Broad catch is intentional to prevent menu loop from crashing on unexpected errors
@@ -305,6 +313,26 @@ namespace HP7090ATest
         /// Menu option text for launching the demo
         /// </summary>
         private const string MenuChoiceLaunchDemo = "Launch Demo";
+
+        /// <summary>
+        /// Menu option text for plotting the imported AT Walker HPGL file
+        /// </summary>
+        private const string MenuChoicePlotAtWalker = "Plot AT Walker";
+
+        /// <summary>
+        /// Menu option text for plotting the imported Shuttle HPGL file
+        /// </summary>
+        private const string MenuChoicePlotShuttle = "Plot Shuttle";
+
+        /// <summary>
+        /// Relative path to the AT Walker HPGL file
+        /// </summary>
+        private const string WalkerHpglRelativePath = "HPGL\\ImperialWalker-HPGL.plt";
+
+        /// <summary>
+        /// Relative path to the Shuttle HPGL file
+        /// </summary>
+        private const string ShuttleHpglRelativePath = "HPGL\\columbia-Model-SHPGL.plt";
         
         /// <summary>
         /// Menu option text for exiting the application
@@ -507,8 +535,103 @@ namespace HP7090ATest
                 new SelectionPrompt<string>()
                     .Title("[cyan]What would you like to do?[/]")
                     .PageSize(10)
-                    .AddChoices(new[] { MenuChoiceSetGpibAddress, MenuChoiceLaunchDemo, MenuChoiceExit })
+                    .AddChoices(new[]
+                    {
+                        MenuChoiceSetGpibAddress,
+                        MenuChoiceLaunchDemo,
+                        MenuChoicePlotAtWalker,
+                        MenuChoicePlotShuttle,
+                        MenuChoiceExit
+                    })
             );
+        }
+
+        /// <summary>
+        /// Runs a plotting job by sending HPGL commands from a file.
+        /// </summary>
+        /// <param name="gpibAddress">The GPIB address to use for the plotter</param>
+        /// <param name="plotName">Display name of the selected plot</param>
+        /// <param name="hpglRelativePath">Relative path of the HPGL file to send</param>
+        private static void RunHpglFilePlot(int gpibAddress, string plotName, string hpglRelativePath)
+        {
+            try
+            {
+                InitializeGpibConnection(gpibAddress);
+
+                AnsiConsole.MarkupLine($"[yellow]Sending {plotName} HPGL file to plotter...[/]");
+                PlotHpglFile(hpglRelativePath);
+                AnsiConsole.MarkupLine("[green]HPGL plot completed successfully![/]");
+
+                WaitForUserToReturnToMenu();
+            }
+            catch (Ivi.Visa.IOTimeoutException ex)
+            {
+                LogError("GPIB timeout occurred", ex);
+                WaitForUserToReturnToMenu();
+            }
+            catch (Ivi.Visa.VisaException ex)
+            {
+                LogError("VISA communication error", ex);
+                WaitForUserToReturnToMenu();
+            }
+#pragma warning disable CA1031 // Broad catch is intentional as a final fallback for unexpected errors
+            catch (Exception ex)
+            {
+                LogError("Unexpected error", ex);
+                WaitForUserToReturnToMenu();
+            }
+#pragma warning restore CA1031
+            finally
+            {
+                CleanupGpibConnection();
+            }
+        }
+
+        /// <summary>
+        /// Reads an HPGL file and sends each command segment to the plotter.
+        /// </summary>
+        /// <param name="hpglRelativePath">Relative path to the HPGL file</param>
+        private static void PlotHpglFile(string hpglRelativePath)
+        {
+            ValidateGpibSession();
+
+            string outputRelativePath = hpglRelativePath.Replace('\\', Path.DirectorySeparatorChar);
+            string baseDirectoryPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, outputRelativePath);
+            string workingDirectoryPath = Path.Combine(Environment.CurrentDirectory, outputRelativePath);
+
+            string hpglFilePath = File.Exists(baseDirectoryPath)
+                ? baseDirectoryPath
+                : workingDirectoryPath;
+
+            if (!File.Exists(hpglFilePath))
+            {
+                throw new FileNotFoundException(
+                    $"HPGL file not found at '{baseDirectoryPath}' or '{workingDirectoryPath}'.",
+                    hpglRelativePath);
+            }
+
+            string hpglFileContents = File.ReadAllText(hpglFilePath);
+
+            if (string.IsNullOrWhiteSpace(hpglFileContents))
+            {
+                throw new InvalidOperationException($"HPGL file is empty: {hpglFilePath}");
+            }
+
+            string[] commands = Regex.Split(hpglFileContents, @"(?<=[;:])");
+            int sentCommandCount = 0;
+
+            foreach (string command in commands)
+            {
+                if (string.IsNullOrWhiteSpace(command))
+                {
+                    continue;
+                }
+
+                gpibSession.FormattedIO.WriteLine(command);
+                sentCommandCount++;
+            }
+
+            AnsiConsole.MarkupLine($"[green]Sent {sentCommandCount} HPGL command segments from {Path.GetFileName(hpglFilePath)}.[/]");
         }
 
         #endregion
